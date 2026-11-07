@@ -1,0 +1,30 @@
+
+# Dependencies
+node_modules/
+
+# Build
+.next/
+out/
+build/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Development Tools
+__v0_*
+.snowflake/
+.design-cache/
+.v0-trash/
+.vercel/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Security
+*.pem

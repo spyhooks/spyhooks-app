@@ -1,0 +1,87 @@
+
+{
+  "siteName": "SpyHooks",
+  "tagline": "Hook the curve. Surface on Uniswap.",
+  "description": "SpyHooks routes Uniswap v4 swaps straight into launchpad bonding curves.",
+  "logo": "/logo.png",
+  "favicon": "/logo.png",
+  "token": {
+    "name": "SPYHOOKS",
+    "ticker": "SPYHOOKS",
+    "contract": "0xa4a63138bce377cf1909f72a74dea3a0cc60f94d",
+    "supply": "1,000,000,000",
+    "buyUrl": "https://ponsfamily.com/launchpad/0x4cc4f1fcf4c3251c40e396befd484551127524cc",
+    "chartUrl": "https://ponsfamily.com/launchpad/0x4cc4f1fcf4c3251c40e396befd484551127524cc",
+    "volume24hUsd": 1750.25,
+    "liquidityUsd": 12100
+  },
+  "stats": {
+    "surfacedCount": 1
+  },
+  "network": {
+    "name": "Robinhood Chain",
+    "currency": "ETH",
+    "dex": "Uniswap v4",
+    "explorerUrl": "https://robinhoodchain.blockscout.com"
+  },
+  "links": {
+  "x": "https://x.com/spyhooks",
+  "xHandle": "@spyhooks",
+  "github": "https://github.com/USERNAME",
+  "telegram": "",
+  "website": "",
+  "docs": "/docs"
+},
+  "fees": {
+    "wallet": "0x0000000000000000000000000000000000000000",
+    "bps": 50
+  },
+  "swap": {
+    "routerAddress": "0x204FAca1764B154221e35c0d20aBb3c525710498"
+  },
+  "api": {
+    "tokensUrl": "/api/pons",
+    "rpcUrl": "https://rpc.mainnet.chain.robinhood.com",
+    "ponsFactory": "0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e"
+  },
+  "hero": {
+    "eyebrow": "Launchpad router for {dex}",
+    "title": "Bring your curve token to the surface.",
+    "subtitle": "Bonding-curve tokens are invisible to Uniswap until they graduate. Hook yours in and every Uniswap swap is routed straight into the curve, at the curve's own price."
+  },
+  "nav": [
+    {
+      "key": "tokens",
+      "label": "Tokens",
+      "href": "/"
+    },
+    {
+      "key": "swap",
+      "label": "Swap",
+      "href": "/swap"
+    },
+    {
+      "key": "launchpads",
+      "label": "Launchpads",
+      "href": "/launchpads"
+    },
+    {
+      "key": "token",
+      "label": "$SPYHOOKS",
+      "href": "/token"
+    },
+    {
+      "key": "docs",
+      "label": "Docs",
+      "href": "/docs"
+    }
+  ],
+  "launchpads": [
+    {
+      "name": "Pons",
+      "chain": "Robinhood Chain",
+      "url": "https://pons.family/launchpad",
+      "description": "Noncustodial bonding-curve launchpad. Tokens climb the curve, then graduate into permanently locked Uniswap v4 pools."
+    }
+  ]
+}
