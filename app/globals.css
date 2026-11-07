@@ -1,0 +1,182 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-glow: var(--glow);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+}
+
+/* SpyHooks monochrome: black, white, neutral grays. Orange remains only in the supplied logo artwork. */
+:root {
+  color-scheme: light;
+  --background: #f7f7f7;
+  --foreground: #101010;
+  --card: rgb(255 255 255 / 0.94);
+  --card-foreground: #101010;
+  --popover: #ffffff;
+  --popover-foreground: #101010;
+  --primary: #171717;
+  --primary-foreground: #ffffff;
+  --secondary: #ededed;
+  --secondary-foreground: #202020;
+  --muted: #ececec;
+  --muted-foreground: #676767;
+  --accent: #e8e8e8;
+  --accent-foreground: #191919;
+  --destructive: #b52b2b;
+  --border: rgb(0 0 0 / 0.14);
+  --input: rgb(0 0 0 / 0.18);
+  --ring: #505050;
+  --glow: #b6b6b6;
+  --radius: 1rem;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #080808;
+  --foreground: #f8f8f8;
+  --card: rgb(19 19 19 / 0.94);
+  --card-foreground: #f8f8f8;
+  --popover: #181818;
+  --popover-foreground: #f8f8f8;
+  --primary: #f5f5f5;
+  --primary-foreground: #101010;
+  --secondary: #222222;
+  --secondary-foreground: #f4f4f4;
+  --muted: #252525;
+  --muted-foreground: #a3a3a3;
+  --accent: #303030;
+  --accent-foreground: #ffffff;
+  --destructive: #f17373;
+  --border: rgb(255 255 255 / 0.16);
+  --input: rgb(255 255 255 / 0.19);
+  --ring: #c3c3c3;
+  --glow: #777777;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground font-sans; }
+}
+
+@layer utilities {
+  .glass { @apply border border-border bg-card backdrop-blur-xl; }
+  .text-gradient {
+    background-image: linear-gradient(110deg, var(--foreground) 0%, #a0a0a0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-brand { background: var(--primary); }
+}
+
+.site-backdrop {
+  background: radial-gradient(ellipse 60% 40% at 100% 0%, rgb(255 255 255 / 0.025), transparent 75%), #080808;
+}
+.site-backdrop-light {
+  background: radial-gradient(ellipse 60% 40% at 100% 0%, rgb(0 0 0 / 0.025), transparent 75%), #f7f7f7;
+}
+.dark .glass { box-shadow: 0 8px 24px rgb(0 0 0 / 0.17); }
+.glass { box-shadow: 0 6px 24px rgb(0 0 0 / 0.035); }
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.ripple {
+  animation: ripple 5s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ripple {
+    animation: none;
+  }
+}
+
+/* Monochrome spotlight that follows mouse on desktop; deliberately low contrast. */
+.mouse-spotlight {
+  width: min(680px, 70vw);
+  height: min(680px, 70vw);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.065) 0%, rgba(255,255,255,.026) 32%, transparent 70%);
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce), (pointer: coarse) { .mouse-spotlight { display: none !important; } }
+
+/* Lightweight CSS 3D hero cube, with a bounded mouse-driven tilt. */
+.spy-cube-scene { perspective: 150px; }
+.spy-cube { position: relative; width: 220px; height: 220px; transform-style: preserve-3d; will-change: transform; transition: transform 200ms ease-out; }
+.spy-cube-face { position: absolute; inset: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.3); border-radius: 24px; backface-visibility: hidden; }
+.spy-cube-front { transform: translateZ(17px); background: #080808; box-shadow: 0 20px 36px rgba(0,0,0,.3); }
+.spy-cube-side { left: auto; width: 34px; transform: rotateY(90deg) translateZ(17px); background: linear-gradient(110deg,#333,#080808); }
+.spy-cube-top { bottom: auto; height: 34px; transform: rotateX(90deg) translateZ(17px); background: linear-gradient(120deg,#494949,#121212); }
+.spy-cube img { width: 100%; height: 100%; object-fit: contain; }
+@media (prefers-reduced-motion: reduce) { .spy-cube { transform: none !important; transition: none !important; } }
+
+
+/* Animated Abstract Wave Depth — decorative, monochrome, unobtrusive. */
+.abstract-wave-depth {
+  opacity: .85;
+  will-change: transform;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 86%, transparent 100%);
+}
+.abstract-wave-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.abstract-wave-band { transform-box: fill-box; transform-origin: center; }
+.abstract-wave-band-upper { animation: spy-wave-drift 28s ease-in-out infinite alternate; }
+.abstract-wave-band-lower { animation: spy-wave-drift-reverse 36s ease-in-out infinite alternate; }
+@keyframes spy-wave-drift {
+  from { transform: translate3d(-22px, -8px, 0) scale(1.015); }
+  to { transform: translate3d(22px, 15px, 0) scale(1.055); }
+}
+@keyframes spy-wave-drift-reverse {
+  from { transform: translate3d(20px, 10px, 0) scale(1.025); }
+  to { transform: translate3d(-24px, -12px, 0) scale(1.055); }
+}
+@media (max-width: 640px) {
+  .abstract-wave-depth { opacity: .36; }
+  .abstract-wave-band { animation-duration: 45s; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .abstract-wave-depth { will-change: auto; transform: none !important; }
+  .abstract-wave-band { animation: none !important; }
+}
