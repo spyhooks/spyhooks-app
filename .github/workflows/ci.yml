@@ -1,0 +1,19 @@
+
+name: Spyhooks CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify repository
+        run: echo "Spyhooks CI is running"
