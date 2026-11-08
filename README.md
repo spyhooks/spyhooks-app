@@ -1,108 +1,230 @@
 # SPYHOOKS
 
-### Bring Your Curve Token to the Surface.
+<div align="center">
 
-**A bonding-curve token discovery and swap-routing platform built for Robinhood Chain and Uniswap v4.**
+### Discover the curve. Follow the liquidity.
 
-[Website](https://spyhooks.app) · [Source Code](https://github.com/spyhooks/spyhooks-app)
+**Token Discovery & Swap Infrastructure for Robinhood Chain**
+
+[![CI](https://github.com/spyhooks/spyhooks-app/actions/workflows/ci.yml/badge.svg)](https://github.com/spyhooks/spyhooks-app/actions/workflows/ci.yml)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)
+![Robinhood Chain](https://img.shields.io/badge/Network-Robinhood%20Chain-89B85B)
+![Status](https://img.shields.io/badge/Status-Active%20Development-8ABF60)
+
+**[Website](https://spyhooks.app)** · **[Documentation](https://spyhooks.app/docs)** · **[Issues](https://github.com/spyhooks/spyhooks-app/issues)** · **[Development Activity](https://github.com/spyhooks/spyhooks-app/pulls)**
 
 ---
 
+*Explore token launches, track bonding-curve activity, and navigate on-chain markets through a unified Web3 interface.*
+
+</div>
+
 ## Overview
 
-**Spyhooks** is a Web3 platform designed to connect bonding-curve token markets with the Uniswap v4 ecosystem.
+**Spyhooks** is a Web3 application built for the Robinhood Chain ecosystem.
 
-Our goal is to make emerging tokens easier to discover, monitor, and trade through a unified interface.
+It brings together token discovery, bonding-curve tracking, on-chain market information, and swap functionality within a streamlined interface.
 
-Spyhooks focuses on providing a streamlined experience for exploring token launches, monitoring bonding-curve progression, and accessing swap-routing functionality.
+Spyhooks is designed around a simple objective: make emerging token markets easier to discover, understand, and navigate.
 
-## Core Features
+## Platform Features
 
-### Bonding-Curve Swap Routing
-
-Designed to route supported Uniswap v4 swap activity into bonding-curve markets, with pricing determined by the underlying curve mechanism.
-
-### Live Token Discovery
-
-Explore tokens across different lifecycle stages:
-
-- **On Curve** — Tokens currently operating on bonding curves.
-- **Graduating** — Tokens approaching their graduation conditions.
-- **Surfaced** — Tokens that have completed their graduation process.
-
-### Market Analytics
-
-Monitor key token metrics through a unified dashboard:
-
-- Market capitalization
-- Trading volume
-- Liquidity
-- Bonding-curve progress
-- Token lifecycle status
-
-### Wallet Connectivity
-
-A wallet connection interface designed to support blockchain interactions and token trading.
-
-### Token Explorer
-
-Search for tokens by name or ticker, inspect contract addresses, and access token chart links.
-
-## Ecosystem
-
-| Component | Description |
+| Feature | Description |
 |---|---|
-| Network | Robinhood Chain |
-| Swap Integration | Uniswap v4 |
-| Token Mechanism | Bonding Curve |
-| Application | Web3 Interface |
-| Development Framework | Next.js |
+| Token Discovery | Explore token launches and discover emerging assets |
+| Bonding Curve Tracking | Monitor token progress during the launch lifecycle |
+| Token Lifecycle | Distinguish on-curve, graduating, and graduated tokens |
+| Market Intelligence | Display available token prices, market capitalization, and trading volume |
+| Token Search | Discover assets through supported search functionality |
+| Swap Interface | Access token swapping workflows through a unified interface |
+| Wallet Connectivity | Connect compatible Web3 wallets |
+| On-Chain Data | Retrieve token activity through blockchain RPC and API integrations |
+| Responsive Interface | Navigate the platform on desktop and mobile devices |
+
+Some capabilities depend on available RPC data, compatible contracts, and external services.
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 |
+| UI | React 19 |
 | Language | TypeScript |
+| Styling | Tailwind CSS 4 |
+| Blockchain Interaction | viem |
+| Package Manager | pnpm |
+| Version Control | Git & GitHub |
+| Continuous Integration | GitHub Actions |
+| Target Network | Robinhood Chain |
 
-## How It Works
+## Architecture
 
-**Discover → Analyze → Connect → Swap → Monitor**
+```text
+Spyhooks Application
+│
+├── Web Interface
+│   ├── Token Discovery
+│   ├── Token Details
+│   ├── Swap
+│   └── Documentation
+│
+├── API Layer
+│   ├── Pons Token Data
+│   ├── ETH/USD Data
+│   └── On-Chain Token Statistics
+│
+├── Blockchain Integration
+│   ├── Robinhood Chain RPC
+│   ├── Event Processing
+│   └── Token Lifecycle Tracking
+│
+└── Application Services
+    ├── Configuration
+    ├── Caching
+    └── External Data Providers
+```
 
-1. Discover tokens through the Spyhooks token explorer.
-2. Analyze bonding-curve progression and available market data.
-3. Connect a compatible wallet.
-4. Access supported swap-routing functionality.
-5. Monitor token lifecycle changes and market activity.
+## Getting Started
 
-## Development Status
+### Prerequisites
 
-**Pre-launch — Active Development**
+You will need a compatible Node.js installation, pnpm, and Git.
 
-Spyhooks is currently being prepared for deployment.
+### Installation
 
-The interface and planned functionality described in this repository may evolve. Smart contract integrations, routing behavior, wallet compatibility, and live market data must be verified before production use.
+Clone the repository:
 
-## Vision
+```bash
+git clone https://github.com/spyhooks/spyhooks-app.git
+cd spyhooks-app
+```
 
-To make bonding-curve token markets more accessible through a transparent, efficient, and intuitive Web3 experience.
+Install dependencies:
 
-Spyhooks aims to bridge emerging token discovery with decentralized liquidity infrastructure.
+```bash
+pnpm install --frozen-lockfile
+```
+
+Configure the required local application settings before starting. Some runtime configuration is intentionally excluded from the public repository.
+
+Start the development server:
+
+```bash
+pnpm dev
+```
+
+Open `http://localhost:3000` in your browser.
+
+### Production Build
+
+Validate TypeScript:
+
+```bash
+pnpm exec tsc --noEmit
+```
+
+Create an optimized production build:
+
+```bash
+pnpm build
+```
+
+Start the production server:
+
+```bash
+pnpm start
+```
+
+A successful build does not, by itself, verify all live blockchain integrations.
+
+## API Endpoints
+
+The application includes the following server-side API routes:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/pons` | Pons token discovery and lifecycle data |
+| `GET /api/eth-usd` | ETH/USD market data |
+| `GET /api/onchain-token-stats` | On-chain token statistics |
+
+API responses depend on provider availability, network conditions, and configuration.
+
+## Development Roadmap
+
+Spyhooks follows an incremental development approach focused on reliability, usability, and Web3 integration.
+
+### Completed
+
+- [x] Initialize the Next.js application
+- [x] Establish GitHub development workflow
+- [x] Configure automated CI checks
+- [x] Resolve Pons API TypeScript cache error
+- [x] Validate local TypeScript compilation
+- [x] Validate the Next.js production build
+- [x] Improve Git repository hygiene
+
+### Planned / Under Review
+
+- [ ] Strengthen repository branch protection
+- [ ] Implement API health monitoring
+- [ ] Improve RPC reliability checks
+- [ ] Validate official contract configuration integrity
+- [ ] Complete production deployment verification
+- [ ] Expand wallet and swap security testing
+- [ ] Improve token data accuracy and lifecycle validation
+- [ ] Enhance token search and filtering
+
+Progress and priorities are tracked through GitHub Issues and the Spyhooks Development Roadmap.
+
+## Development Workflow
+
+The repository uses a structured Git workflow:
+
+| Branch | Purpose |
+|---|---|
+| `main` | Production-oriented source code |
+| `develop` | Ongoing development and integration |
+| `feature/*` | Isolated feature development |
+
+GitHub Actions runs automated checks for TypeScript compilation and Next.js production builds.
 
 ## Security
 
-Spyhooks is intended to interact with blockchain-based assets and decentralized protocols.
+Security and configuration integrity are important parts of Spyhooks development.
 
-Users should independently verify contract addresses, transaction details, and associated risks before interacting with any token or smart contract.
+- Sensitive credentials must not be committed to the repository.
+- Private keys and recovery phrases must never be requested or stored.
+- Production configuration changes should be controlled.
+- Contract addresses should be verified independently.
+- Transaction details should be reviewed before wallet confirmation.
 
-No security audit or guarantee of transaction safety is implied by this documentation.
+**Disclaimer:** Spyhooks is not presented as independently audited. Blockchain transactions involve financial and technical risks. Users should verify contract addresses and transaction details before interacting with tokens.
 
-## Official Links
+## Contributing
+
+Contributions, bug reports, and improvement suggestions are welcome.
+
+Before contributing, please review [CONTRIBUTING.md](CONTRIBUTING.md).
+
+You can also submit feedback through [GitHub Issues](https://github.com/spyhooks/spyhooks-app/issues).
+
+## Project Links
 
 **Website:** https://spyhooks.app
 
 **GitHub:** https://github.com/spyhooks/spyhooks-app
 
-## License
-
-All rights reserved unless otherwise specified.
+**Documentation:** https://spyhooks.app/docs
 
 ---
 
-**© 2026 SPYHOOKS**
+<div align="center">
 
-*Bring Your Curve Token to the Surface.*
+**SPYHOOKS**
+
+*Built for discovery. Designed for the curve.*
+
+**Robinhood Chain Ecosystem**
+
+</div>

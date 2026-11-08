@@ -31,3 +31,6 @@ Thumbs.db
 
 # Private Configuration
 /public/config.json
+
+# TypeScript build cache
+*.tsbuildinfo
