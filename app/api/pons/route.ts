@@ -268,35 +268,72 @@ async function refreshCache(rpcUrl: string, factory: string) {
   return refreshPromise
 }
 
+
+function getCacheSnapshot(): {
+  at: number
+  rows: TokenRow[]
+} | null {
+  return cache
+}
+
+
 export async function GET() {
   const config = await getServerConfig()
   const rpcUrl = config.api.rpcUrl || DEFAULT_RPC
   const factory = config.api.ponsFactory || DEFAULT_FACTORY
 
   try {
-    if (cache) {
-      if (Date.now() - cache.at > CACHE_MS) {
-        // Serve stale data immediately and refresh in the background.
+    const existingCache = getCacheSnapshot()
+
+    if (existingCache) {
+      const isStale = Date.now() - existingCache.at > CACHE_MS
+
+      if (isStale) {
         void refreshCache(rpcUrl, factory).catch((error) => {
           console.error('[pons] background refresh failed:', error)
         })
       }
-      return NextResponse.json(cache.rows, {
+
+      return NextResponse.json(existingCache.rows, {
         headers: {
-          'cache-control': 'public, s-maxage=10, stale-while-revalidate=60',
-          'x-spyhooks-cache': Date.now() - cache.at > CACHE_MS ? 'stale' : 'fresh',
+          'cache-control':
+            'public, s-maxage=10, stale-while-revalidate=60',
+          'x-spyhooks-cache': isStale ? 'stale' : 'fresh',
         },
       })
     }
 
-    // First request has no stale snapshot, so build the initial token list.
+    // First request: build the initial token list.
     await refreshCache(rpcUrl, factory)
-    if (!cache) throw new Error('Pons data is not available yet')
-    return NextResponse.json(cache.rows, {
-      headers: { 'cache-control': 'public, s-maxage=10, stale-while-revalidate=60', 'x-spyhooks-cache': 'miss' },
+
+    const freshCache = getCacheSnapshot()
+
+    if (!freshCache) {
+      throw new Error('Pons data is not available yet')
+    }
+
+    return NextResponse.json(freshCache.rows, {
+      headers: {
+        'cache-control':
+          'public, s-maxage=10, stale-while-revalidate=60',
+        'x-spyhooks-cache': 'miss',
+      },
     })
   } catch (error) {
-    if (cache) return NextResponse.json(cache.rows)
-    return NextResponse.json({ error: (error as Error).message }, { status: 502 })
+    const fallbackCache = getCacheSnapshot()
+
+    if (fallbackCache) {
+      return NextResponse.json(fallbackCache.rows)
+    }
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to load Pons data',
+      },
+      { status: 502 },
+    )
   }
 }

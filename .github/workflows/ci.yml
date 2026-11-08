@@ -2,18 +2,49 @@
 name: Spyhooks CI
 
 on:
+  push:
+    branches:
+      - main
+      - develop
+
   pull_request:
     branches:
       - main
       - develop
 
+permissions:
+  contents: read
+
 jobs:
-  verify:
+  build:
+    name: TypeScript & Next.js Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify repository
-        run: echo "Spyhooks CI is running"
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.3.4
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check TypeScript
+        run: pnpm exec tsc --noEmit
+
+      - name: Build Next.js
+        run: pnpm build
+
+      - name: CI completed
+        run: echo "Spyhooks CI completed successfully"
