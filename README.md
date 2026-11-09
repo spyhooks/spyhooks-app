@@ -174,7 +174,8 @@ Spyhooks follows an incremental development approach focused on reliability, usa
 - [ ] Expand wallet and swap security testing
 - [ ] Improve token data accuracy and lifecycle validation
 - [ ] Enhance token search and filtering
-
+- [ ] Develop Contract Scanner for Robinhood Chain tokens and Uniswap v4 hooks
+      
 Progress and priorities are tracked through GitHub Issues and the Spyhooks Development Roadmap.
 
 ## Development Workflow
