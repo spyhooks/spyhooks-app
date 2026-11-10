@@ -16,7 +16,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
     <div className="rounded-2xl bg-background/60 p-4">
       <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
       <div className="mt-1.5 flex items-center justify-between gap-3">
-        <code className="truncate font-mono text-sm">{value || 'Not set in config.json'}</code>
+        <code className="truncate font-mono text-sm">{value || 'Coming Soon'}</code>
         {value && (
           <button type="button" onClick={copy} aria-label={`Copy ${label}`} className="shrink-0 rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-primary">
             {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
