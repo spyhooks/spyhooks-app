@@ -22,9 +22,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light dark',
+  colorScheme: 'dark',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f7f7f7' },
+    { media: '(prefers-color-scheme: light)', color: '#080808' },
     { media: '(prefers-color-scheme: dark)', color: '#080808' },
   ],
 }
@@ -32,9 +32,9 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const config = await getServerConfig()
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${grotesk.variable} ${plexMono.variable} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false} disableTransitionOnChange>
           <ConfigProvider initial={config}>
             <div className="relative min-h-dvh overflow-x-clip">
               <div aria-hidden="true" className="site-backdrop pointer-events-none fixed inset-0 -z-10 hidden dark:block" />

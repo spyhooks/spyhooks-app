@@ -14,7 +14,10 @@ const fetchConfig = (url: string) =>
 export function ConfigProvider({ initial, children }: { initial: SiteConfig; children: React.ReactNode }) {
   const { data } = useSWR<SiteConfig>('/config.json', fetchConfig, {
     fallbackData: initial,
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
+    refreshInterval: 10_000,
+    dedupingInterval: 3000,
+    revalidateOnReconnect: true,
   })
   const config = data ?? initial
 
