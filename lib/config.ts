@@ -18,7 +18,7 @@ export type SiteConfig = {
     liquidityUsd?: number | null
   }
   /** Site-wide count floor for confirmed surfaced tokens. Update as more tokens graduate. */
-  stats?: { surfacedCount?: number }
+  stats?: { surfacedCount?: number; launchStartBlock?: number; launchStartAt?: string }
   network: {
     name: string
     currency: string
@@ -38,7 +38,7 @@ export type SiteConfig = {
   api: { tokensUrl: string; rpcUrl?: string; ponsFactory?: string }
   hero: { eyebrow: string; title: string; subtitle: string }
   nav: NavItem[]
-  launchpads: { name: string; chain: string; url: string; description: string }[]
+  launchpads: { name: string; chain: string; url: string; description: string; logo?: string }[]
 }
 
 export const fallbackConfig: SiteConfig = {

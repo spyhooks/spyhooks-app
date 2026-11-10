@@ -49,8 +49,13 @@ export function useTokens() {
   const { data, isLoading, error, mutate } = useSWR<TokenRow[]>(
     url,
     async (endpoint: string) => {
-      const res = await fetch(endpoint, {
+      // Force the API to await a fresh scan when the server snapshot expires.
+      // Cache-bust both browser caches and intermediate hosting/CDN caches.
+      const separator = endpoint.includes('?') ? '&' : '?'
+      const requestUrl = `${endpoint}${separator}fresh=1&_t=${Date.now()}`
+      const res = await fetch(requestUrl, {
         cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
       })
 
       if (!res.ok) {
@@ -64,9 +69,9 @@ export function useTokens() {
       revalidateOnMount: true,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      refreshInterval: url ? 15000 : 0,
+      refreshInterval: url ? 10000 : 0,
       dedupingInterval: 0,
-      keepPreviousData: false,
+      keepPreviousData: true,
       shouldRetryOnError: true,
       errorRetryCount: 3,
       errorRetryInterval: 2000,

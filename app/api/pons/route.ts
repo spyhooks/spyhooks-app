@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerConfig } from '@/lib/config.server'
 import type { TokenRow } from '@/lib/tokens'
+import { persistHistory } from '@/lib/launch-history.server'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,14 +14,21 @@ const DEFAULT_RPC = 'https://rpc.mainnet.chain.robinhood.com'
 const DEFAULT_FACTORY = '0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e'
 const LOOKBACK_BLOCKS = 100_000
 const TOTAL_SUPPLY = 1_000_000_000
-const CACHE_MS = 60_000
+const CACHE_MS = 12_000
 const LOGO_RETRY_MS = 30_000
 
 type RpcCall = { method: string; params: unknown[] }
 type Log = { topics: string[]; data: string; blockNumber: string; logIndex: string }
 
 let cache: { at: number; rows: TokenRow[] } | null = null
+function getCacheSnapshot(): {
+  at: number
+  rows: TokenRow[]
+} | null {
+  return cache
+}
 let refreshPromise: Promise<void> | null = null
+let lastRefreshAttempt = 0
 // Keep discovered artwork across API refreshes for as long as this server process runs.
 const logoCache = new Map<string, string>()
 const logoLastChecked = new Map<string, number>()
@@ -153,6 +161,7 @@ async function buildRows(rpcUrl: string, factory: string): Promise<TokenRow[]> {
       mcap: price * TOTAL_SUPPLY,
       volume: eth(volume),
       ageMinutes: Math.max(0, Math.round(((head - l.block) * secPerBlock) / 60)),
+      launchBlock: l.block,
       status: graduatedTokens.has(l.token.toLowerCase())
         ? 'graduated'
         : sweptTokens.has(l.token.toLowerCase()) ? 'graduating' : 'curve',
@@ -250,6 +259,7 @@ function startBackgroundLogoResolution(rows: TokenRow[]) {
 
 async function refreshCache(rpcUrl: string, factory: string) {
   if (refreshPromise) return refreshPromise
+  lastRefreshAttempt = Date.now()
   refreshPromise = (async () => {
     try {
       const rows = await buildRows(rpcUrl, factory)
@@ -259,8 +269,16 @@ async function refreshCache(rpcUrl: string, factory: string) {
         ...row,
         logoUrl: row.logoUrl || logoCache.get(row.address.toLowerCase()),
       }))
+      // Restore the original scanner behaviour: publish newly scanned tokens
+      // immediately. Recording a cumulative launch history MUST NOT block or
+      // replace the live token list (which also drives On Curve and Swap).
       cache = { at: Date.now(), rows: withCachedLogos }
       startBackgroundLogoResolution(withCachedLogos)
+      // Best effort persistence happens separately after the live cache updates.
+      // It does not add historical curve tokens to live results or change counts.
+      void persistHistory(factory, withCachedLogos).catch((error) => {
+        console.error('[pons] launch history write failed:', error)
+      })
     } finally {
       refreshPromise = null
     }
@@ -268,72 +286,68 @@ async function refreshCache(rpcUrl: string, factory: string) {
   return refreshPromise
 }
 
-
-function getCacheSnapshot(): {
-  at: number
-  rows: TokenRow[]
-} | null {
-  return cache
-}
-
-
-export async function GET() {
+// Requests with ?fresh=1 wait for the latest scanner result once the cache is old.
+// Other callers retain the quick stale-while-revalidate behaviour.
+// A single promise coalesces concurrent refreshes to avoid multiplying RPC calls.
+export async function GET(request: NextRequest) {
   const config = await getServerConfig()
   const rpcUrl = config.api.rpcUrl || DEFAULT_RPC
   const factory = config.api.ponsFactory || DEFAULT_FACTORY
+  const needsFresh = request.nextUrl.searchParams.get('fresh') === '1'
 
-  try {
-    const existingCache = getCacheSnapshot()
+const headers = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+  Pragma: 'no-cache',
+  Expires: '0',
+}
 
-    if (existingCache) {
-      const isStale = Date.now() - existingCache.at > CACHE_MS
-
-      if (isStale) {
-        void refreshCache(rpcUrl, factory).catch((error) => {
-          console.error('[pons] background refresh failed:', error)
-        })
-      }
-
-      return NextResponse.json(existingCache.rows, {
-        headers: {
-          'cache-control':
-            'public, s-maxage=10, stale-while-revalidate=60',
-          'x-spyhooks-cache': isStale ? 'stale' : 'fresh',
-        },
-      })
-    }
-
-    // First request: build the initial token list.
+try {
+  if (!cache) {
     await refreshCache(rpcUrl, factory)
 
     const freshCache = getCacheSnapshot()
 
     if (!freshCache) {
-      throw new Error('Pons data is not available yet')
+      throw new Error('Pons scanner returned no data')
     }
 
     return NextResponse.json(freshCache.rows, {
       headers: {
-        'cache-control':
-          'public, s-maxage=10, stale-while-revalidate=60',
+        ...headers,
         'x-spyhooks-cache': 'miss',
       },
     })
-  } catch (error) {
-    const fallbackCache = getCacheSnapshot()
+  }
 
-    if (fallbackCache) {
-      return NextResponse.json(fallbackCache.rows)
+  const age = Date.now() - cache.at
+
+    if (age >= CACHE_MS) {
+      // Limit re-scans after failures as well as during normal traffic.
+      if (Date.now() - lastRefreshAttempt >= CACHE_MS) {
+        const pending = refreshCache(rpcUrl, factory)
+        if (needsFresh) {
+          try { await pending } catch (err) {
+            console.error('[pons] fresh scanner failed; serving previous snapshot:', err)
+          }
+        } else {
+          void pending.catch((err) => console.error('[pons] scanner failed:', err))
+        }
+      } else if (needsFresh && refreshPromise) {
+        try { await refreshPromise } catch (err) {
+          console.error('[pons] scanner in progress failed:', err)
+        }
+      }
     }
 
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to load Pons data',
+    return NextResponse.json(cache.rows, {
+      headers: {
+        ...headers,
+        'x-spyhooks-cache': Date.now() - cache.at >= CACHE_MS ? 'stale' : 'fresh',
       },
-      { status: 502 },
-    )
+    })
+  } catch (error) {
+    console.error('[pons] token data unavailable:', error)
+    if (cache) return NextResponse.json(cache.rows, { headers: { ...headers, 'x-spyhooks-cache': 'stale-error' } })
+    return NextResponse.json({ error: (error as Error).message }, { status: 502, headers })
   }
 }

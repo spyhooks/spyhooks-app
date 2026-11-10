@@ -6,6 +6,8 @@ export type TokenRow = {
   mcap: number
   volume: number
   ageMinutes: number
+  /** Actual chain launch block when available. */
+  launchBlock?: number
   status: 'curve' | 'graduating' | 'graduated'
   price: number
   address: string
