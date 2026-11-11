@@ -1,0 +1,6 @@
+/* Only the /spy page uses the wider dashboard container. Navbar and other pages are untouched. */
+@supports selector(main:has(.spy-scanner-page)) {
+  main:has(.spy-scanner-page) {
+    max-width: 1540px;
+  }
+}

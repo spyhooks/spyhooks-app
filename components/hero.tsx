@@ -8,6 +8,7 @@ import { useConfig } from '@/components/config-provider'
 import { useTokens } from '@/components/use-tokens'
 import { formatEth } from '@/lib/tokens'
 import { HeroTokenLinks } from '@/components/hero-token-links'
+import { useHeroVisibility } from '@/components/hero-visibility'
 
 // Browser persistence keeps confirmed graduated contracts even when the current
 // RPC lookback window no longer includes their original launch logs.
@@ -18,6 +19,7 @@ const LAUNCH_STORAGE_PREFIX = 'spyhooks-observed-launches-v1:'
 const VALID_ADDRESS = /^0x[a-f0-9]{40}$/i
 
 export function Hero() {
+  const { heroVisible } = useHeroVisibility()
   const { hero, network, stats: manualStats, api } = useConfig()
   const { tokens } = useTokens()
   const { data: history } = useSWR<{ totalLaunch: number | null; status: string; surfacedHistory: { address: string }[] }>(
@@ -106,7 +108,15 @@ export function Hero() {
   ]
 
   return (
-    <section className="relative grid items-center gap-10 py-10 lg:grid-cols-[1.25fr_1fr] lg:py-16">
+    <section className={heroVisible ? 'relative pb-10 lg:pb-16' : 'relative pb-4'}>
+      <div
+        id="spyhooks-home-hero"
+        aria-hidden={!heroVisible}
+        inert={!heroVisible}
+        className={heroVisible ? 'grid grid-rows-[1fr] opacity-100 transition-[grid-template-rows,opacity] duration-300 ease-in-out' : 'grid grid-rows-[0fr] opacity-0 transition-[grid-template-rows,opacity] duration-300 ease-in-out'}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="grid items-center gap-10 py-10 lg:grid-cols-[1.25fr_1fr] lg:py-16">
       <div>
         <p className="glass inline-flex items-center gap-2 rounded-full px-3 py-1 font-mono text-xs uppercase tracking-widest text-primary">
           <span className="size-1.5 animate-pulse rounded-full bg-primary" />
@@ -130,7 +140,11 @@ export function Hero() {
         <HeroTokenLinks />
       </div>
 
-      <dl className="glass col-span-full grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-3xl lg:grid-cols-4 lg:divide-y-0">
+          </div>
+        </div>
+      </div>
+
+      <dl className="glass grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-3xl lg:grid-cols-4 lg:divide-y-0">
         {stats.map((s) => (
           <div key={s.label} className="px-5 py-4">
             <dt className="text-xs uppercase tracking-wider text-muted-foreground">{s.label}</dt>
