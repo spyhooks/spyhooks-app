@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ArrowDownUp, LoaderCircle } from 'lucide-react'
-import { createWalletClient, custom, formatEther, formatUnits, getAddress, parseEther, parseUnits, type Address } from 'viem'
+import { createWalletClient, custom, parseAbi, formatEther, formatUnits, getAddress, parseEther, parseUnits, type Address } from 'viem'
 import { useConfig } from '@/components/config-provider'
 import { useTokens } from '@/components/use-tokens'
 import { useWallet } from '@/components/use-wallet'
@@ -15,6 +15,8 @@ type Eip1193 = { request: (args: { method: string; params?: unknown[] }) => Prom
 const FACTORY = '0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e' as Address
 const EXPLORER = 'https://robinhoodchain.blockscout.com/tx/'
 const OFFICIAL_OPTION = '__spyhooks_official__'
+const TRENDING_OPTION = '__trending_contract__'
+const ADDRESS_PATTERN = /^0x[a-fA-F0-9]{40}$/
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 function isConfiguredAddress(value: string | undefined): value is `0x${string}` {
@@ -27,8 +29,73 @@ export function SwapCard() {
   const { account, connect } = useWallet()
   const params = useSearchParams()
   const requestedTicker = params.get('token')
-  // The official token is pinned, even before launch. Explicit ?token= links keep working.
-  const [ticker, setTicker] = useState(requestedTicker && requestedTicker.toLowerCase() !== (officialConfig.ticker || 'SPYHOOKS').toLowerCase() ? requestedTicker : OFFICIAL_OPTION)
+  const requestedCA = params.get('ca')
+  const validRequestedCA = requestedCA && ADDRESS_PATTERN.test(requestedCA) ? requestedCA.toLowerCase() : null
+  // CA deep links take priority, avoiding ticker collisions and truncated Live Tokens history.
+  const [ticker, setTicker] = useState(validRequestedCA ? TRENDING_OPTION : requestedTicker && requestedTicker.toLowerCase() !== (officialConfig.ticker || 'SPYHOOKS').toLowerCase() ? requestedTicker : OFFICIAL_OPTION)
+  const [externalToken, setExternalToken] = useState<TokenRow | undefined>()
+  const [externalError, setExternalError] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    setExternalToken(undefined)
+    setExternalError('')
+    if (!validRequestedCA) return
+    setTicker(TRENDING_OPTION)
+    ;(async () => {
+      try {
+        const address = getAddress(validRequestedCA)
+        // Only allow the configured Pons factory's token registry to provide trading routes.
+        const launch = await publicClient.readContract({
+          address: FACTORY,
+          abi: factoryAbi,
+          functionName: 'getLaunchedToken',
+          args: [address],
+        })
+        if (!launch.exists || launch.curve.toLowerCase() === ZERO_ADDRESS) {
+          throw new Error('Token not indexed by the configured Pons V2 factory. It may be a Pons V1 token or another launch version.')
+        }
+        const metadataAbi = parseAbi([
+          'function name() view returns (string)',
+          'function symbol() view returns (string)',
+        ])
+        const [nameResult, symbolResult] = await Promise.allSettled([
+          publicClient.readContract({ address, abi: metadataAbi, functionName: 'name' }),
+          publicClient.readContract({ address, abi: metadataAbi, functionName: 'symbol' }),
+        ])
+        if (cancelled) return
+        const name = nameResult.status === 'fulfilled' ? nameResult.value : 'Pons token'
+        const symbol = symbolResult.status === 'fulfilled' ? symbolResult.value : 'TOKEN'
+        const verifiedToken: TokenRow = {
+          address,
+          curveAddress: getAddress(launch.curve),
+          name,
+          ticker: symbol,
+          launchpad: 'Pons',
+          status: Number(launch.phase) === 2 ? 'graduated' : Number(launch.phase) === 1 ? 'graduating' : 'curve',
+          progress: 0,
+          mcap: 0,
+          volume: 0,
+          ageMinutes: 0,
+          price: 0,
+        }
+        setExternalToken(verifiedToken)
+        // Optional artwork is loaded after the on-chain verified token is already usable.
+        try {
+          const response = await fetch('/api/pons-trending', { cache: 'no-store' })
+          if (response.ok) {
+            const payload = await response.json() as { tokens?: Array<{ address: string; logoUrl?: string | null }> }
+            const match = payload.tokens?.find((item) => item.address.toLowerCase() === address.toLowerCase())
+            if (!cancelled && match?.logoUrl?.startsWith('https://')) {
+              setExternalToken({ ...verifiedToken, logoUrl: match.logoUrl })
+            }
+          }
+        } catch { /* Artwork is optional; never block swap. */ }
+      } catch (error) {
+        if (!cancelled) setExternalError(error instanceof Error ? error.message : 'Could not verify token on chain.')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [validRequestedCA])
   const [officialLaunch, setOfficialLaunch] = useState<{ curve: Address; phase: number } | null>(null)
   const [officialStatus, setOfficialStatus] = useState<'soon' | 'checking' | 'active' | 'surfaced' | 'unavailable'>('soon')
   const configuredOfficialAddress = officialConfig.contract?.trim() ?? ''
@@ -94,12 +161,14 @@ export function SwapCard() {
       status: officialLaunch.phase === 2 ? 'graduated' : 'curve',
     }
   }, [hasOfficialAddress, officialLaunch, configuredOfficialAddress, officialConfig.name, officialConfig.ticker, tokens, siteLogo])
-  const token = ticker === OFFICIAL_OPTION ? officialToken : tokens.find((t) => t.ticker === ticker)
+  const token = ticker === OFFICIAL_OPTION ? officialToken : ticker === TRENDING_OPTION ? externalToken : tokens.find((t) => t.ticker === ticker)
   const selectedOfficial = ticker === OFFICIAL_OPTION
   const valid = Number.isFinite(Number(amount)) && Number(amount) > 0
   const curveAddress = token?.curveAddress as Address | undefined
   const tokenAddress = token?.address as Address | undefined
   const canTradeCurve = phase === 0 && nativeQuote && Boolean(curveAddress) && Boolean(tokenAddress)
+  const externalSwapLink = validRequestedCA ? `https://ponsfamily.com/launchpad/${validRequestedCA}` : null
+  const unsupportedQuoteAsset = Boolean(tokenAddress && phase !== null && !nativeQuote)
 
   useEffect(() => {
     let cancelled = false
@@ -173,8 +242,8 @@ export function SwapCard() {
         }
         const native = launch.pairToken === '0x0000000000000000000000000000000000000000'
         setNativeQuote(native)
-        if (p === 0) setRoute(native ? 'Pons bonding curve (native ETH)' : 'Pons curve uses a custom quote token; this UI currently blocks it for safety')
-        else if (p === 2) setRoute('Graduated to Uniswap v4 — on-chain quote enabled; execution is being validated')
+        if (p === 0) setRoute(native ? 'Pons bonding curve (native ETH)' : 'Pons V2 curve — non-ETH quote asset; trading here is not enabled')
+        else if (p === 2) setRoute(native ? 'Pons V2 — Uniswap v4 (ETH pair); execution not enabled' : 'Pons V2 — Uniswap v4 (non-ETH pair); trading here is not enabled')
         else if (p === 1) setRoute('Pons graduation in progress — trading paused')
         else setRoute('Pons launch rescued — normal trading disabled')
       } catch (e) {
@@ -223,13 +292,15 @@ export function SwapCard() {
     if (selectedOfficial && officialStatus === 'soon') return 'SPYHOOKS — Soon'
     if (selectedOfficial && officialStatus === 'checking') return 'Checking SPYHOOKS launch…'
     if (selectedOfficial && officialStatus === 'unavailable') return 'SPYHOOKS trading unavailable'
-    if (!account) return 'Connect wallet'
-    if (busy) return 'Processing…'
-    if (!valid) return 'Enter an amount'
+    if (ticker === TRENDING_OPTION && !externalToken) return externalError ? 'Token not supported here — open on Pons' : 'Verifying Pons token…'
+    if (unsupportedQuoteAsset) return 'Non-ETH market — open on Pons'
     if (phase === 2) return 'Uniswap v4 execution not enabled yet'
+    if (busy) return 'Processing…'
+    if (!account) return 'Connect wallet'
+    if (!valid) return 'Enter an amount'
     if (phase !== 0 || !nativeQuote || !curveAddress) return 'Trading unavailable for this token'
     return selling ? `Sell ${token?.ticker}` : `Buy ${token?.ticker}`
-  }, [account, busy, valid, phase, nativeQuote, curveAddress, selling, token?.ticker, selectedOfficial, officialStatus])
+  }, [account, busy, valid, phase, nativeQuote, curveAddress, selling, token?.ticker, selectedOfficial, officialStatus, ticker, externalToken, externalError, unsupportedQuoteAsset])
 
   async function trade() {
     if (selectedOfficial && officialStatus !== 'active') return
@@ -282,7 +353,7 @@ export function SwapCard() {
         <label htmlFor="swap-in" className="text-xs uppercase tracking-wider text-muted-foreground">{selling ? 'You sell' : 'You pay'}</label>
         <div className="mt-2 flex items-center gap-3">
           <input id="swap-in" inputMode="decimal" placeholder="0.0" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full min-w-0 bg-transparent font-mono text-3xl outline-none placeholder:text-muted-foreground/50" />
-          {selling ? <div className="flex items-center gap-2"><TokenLogo ticker={selectedOfficial ? (officialConfig.ticker || 'SPYHOOKS') : token?.ticker ?? '?'} logoUrl={selectedOfficial ? siteLogo : token?.logoUrl} /><TokenSelect value={ticker} onChange={setTicker} officialTicker={officialConfig.ticker || 'SPYHOOKS'} officialStatus={officialStatus} officialAddress={configuredOfficialAddress} /></div> : <span className="rounded-full bg-muted px-4 py-2 font-mono text-sm font-medium">{network.currency}</span>}
+          {selling ? <div className="flex items-center gap-2"><TokenLogo ticker={selectedOfficial ? (officialConfig.ticker || 'SPYHOOKS') : token?.ticker ?? '?'} logoUrl={selectedOfficial ? siteLogo : token?.logoUrl} /><TokenSelect value={ticker} onChange={setTicker} externalToken={externalToken} officialTicker={officialConfig.ticker || 'SPYHOOKS'} officialStatus={officialStatus} officialAddress={configuredOfficialAddress} /></div> : <span className="rounded-full bg-muted px-4 py-2 font-mono text-sm font-medium">{network.currency}</span>}
         </div>
         <div className="mt-3 space-y-2">
             <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -298,15 +369,22 @@ export function SwapCard() {
       </div>
       <div className="relative z-10 -my-3 flex justify-center"><button type="button" onClick={() => setSelling((s) => !s)} aria-label="Switch buy and sell" className="bg-brand flex size-9 items-center justify-center rounded-full border-4 border-background text-primary-foreground transition hover:rotate-180"><ArrowDownUp className="size-4" /></button></div>
       <div className="rounded-3xl bg-background/60 p-4">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">You receive (estimated on-chain quote)</p>
-        <div className="mt-2 flex items-center gap-3"><p className="w-full min-w-0 truncate font-mono text-3xl">{quote ? Number(quote).toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—'}</p>{selling ? <span className="rounded-full bg-muted px-4 py-2 font-mono text-sm font-medium">{network.currency}</span> : <div className="flex items-center gap-2"><TokenLogo ticker={selectedOfficial ? (officialConfig.ticker || 'SPYHOOKS') : token?.ticker ?? '?'} logoUrl={selectedOfficial ? siteLogo : token?.logoUrl} /><TokenSelect value={ticker} onChange={setTicker} officialTicker={officialConfig.ticker || 'SPYHOOKS'} officialStatus={officialStatus} officialAddress={configuredOfficialAddress} /></div>}</div>
+        <p className="text-xs uppercase tracking-wider text-muted-foreground">{unsupportedQuoteAsset ? 'Receive estimate unavailable for non-ETH pair' : 'You receive (estimated on-chain quote)'}</p>
+        <div className="mt-2 flex items-center gap-3"><p className="w-full min-w-0 truncate font-mono text-3xl">{quote ? Number(quote).toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—'}</p>{selling ? <span className="rounded-full bg-muted px-4 py-2 font-mono text-sm font-medium">{network.currency}</span> : <div className="flex items-center gap-2"><TokenLogo ticker={selectedOfficial ? (officialConfig.ticker || 'SPYHOOKS') : token?.ticker ?? '?'} logoUrl={selectedOfficial ? siteLogo : token?.logoUrl} /><TokenSelect value={ticker} onChange={setTicker} externalToken={externalToken} officialTicker={officialConfig.ticker || 'SPYHOOKS'} officialStatus={officialStatus} officialAddress={configuredOfficialAddress} /></div>}</div>
       </div>
       <dl className="space-y-2 px-3 py-4 text-sm"><Row label="Route" value={selectedOfficial && officialStatus === 'soon' ? 'Awaiting SPYHOOKS launch' : selectedOfficial && officialStatus === 'checking' ? 'Verifying SPYHOOKS on-chain…' : route} /><Row label="Token" value={token?.address ? shortAddress(token.address) : selectedOfficial ? 'Not launched' : 'Unknown'} /><Row label={`Site fee setting (${(fees.bps / 100).toFixed(2)}%)`} value={fees.wallet ? shortAddress(fees.wallet) : 'not set'} /></dl>
-      <button type="button" disabled={busy || (selectedOfficial && officialStatus !== 'active') || (!account ? false : !(valid && canTradeCurve))} onClick={() => void trade()} className="bg-brand flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">{busy && <LoaderCircle className="size-4 animate-spin" />}{actionLabel}</button>
+      <button type="button" disabled={busy || (selectedOfficial && officialStatus !== 'active') || !tokenAddress || !canTradeCurve || (account ? !valid : false)} onClick={() => void trade()} className="bg-brand flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">{busy && <LoaderCircle className="size-4 animate-spin" />}{actionLabel}</button>
+      {ticker === TRENDING_OPTION && !externalToken && <p role="status" className="break-words px-3 pt-3 text-center text-xs text-amber-300">{externalError || 'Checking token on the Pons V2 factory…'}</p>}
+      {externalSwapLink && (unsupportedQuoteAsset || Boolean(externalError) || phase === 2) && (
+        <a href={externalSwapLink} target="_blank" rel="noopener noreferrer" className="mx-3 mt-3 flex h-11 items-center justify-center rounded-full border border-[#ff781f]/65 bg-[#ff781f]/10 text-center text-xs font-semibold text-[#ffae69] hover:bg-[#ff781f]/20">
+          Trade on Pons ↗
+        </a>
+      )}
       {message && <p role="status" className="break-words px-3 pb-1 pt-3 text-center text-xs">{message}</p>}
       {txHash && <p className="px-3 pb-1 text-center text-xs"><a className="underline" href={`${EXPLORER}${txHash}`} target="_blank" rel="noreferrer">View transaction on Blockscout</a></p>}
       <p className="px-3 pb-2 pt-3 text-center text-xs text-muted-foreground">Quotes are read on-chain from the active venue. Curve trades use a 1% minimum-output tolerance.</p>
-      {phase === 2 && <p role="status" className="px-3 pb-2 text-center text-xs text-muted-foreground">Graduated pool quote is read on-chain through the Uniswap v4 Quoter. Swap execution remains disabled until router calldata and approval flow are validated.</p>}
+      {phase === 2 && <p role="status" className="px-3 pb-2 text-center text-xs text-muted-foreground">Graduated token: this page does not yet execute Uniswap v4 trades. {nativeQuote ? 'On-chain ETH-pair quoting may be available.' : 'This pool uses a non-ETH quote asset, so an ETH input would be misleading.'}</p>}
+      {unsupportedQuoteAsset && phase !== 2 && <p role="status" className="px-3 pb-2 text-center text-xs text-amber-300">This token trades against a non-ETH asset. SpyHooks only supports native ETH curves for direct execution at present.</p>}
       {(phase === 1 || phase === 3) && <p role="status" className="px-3 pb-2 text-center text-xs text-muted-foreground">This token is not in a normal tradable phase; no transaction will be sent.</p>}
     </div>
   )
@@ -324,9 +402,10 @@ function TokenLogo({ ticker, logoUrl }: { ticker: string; logoUrl?: string }) {
   )
 }
 
-function TokenSelect({ value, onChange, officialTicker, officialStatus, officialAddress }: {
+function TokenSelect({ value, onChange, externalToken, officialTicker, officialStatus, officialAddress }: {
   value: string
   onChange: (v: string) => void
+  externalToken?: TokenRow
   officialTicker: string
   officialStatus: 'soon' | 'checking' | 'active' | 'surfaced' | 'unavailable'
   officialAddress: string
@@ -336,6 +415,7 @@ function TokenSelect({ value, onChange, officialTicker, officialStatus, official
   return (
     <select aria-label="Select token" value={value} onChange={(e) => onChange(e.target.value)} className="max-w-36 shrink-0 rounded-full bg-muted px-3 py-2 font-mono text-sm font-medium outline-none">
       <option value={OFFICIAL_OPTION}>★ ${officialTicker} · {statusLabel}</option>
+      {value === TRENDING_OPTION && <option value={TRENDING_OPTION}>${externalToken?.ticker ?? 'Checking token'} · Trending</option>}
       {tokens.filter((t) => t.address.toLowerCase() !== officialAddress.toLowerCase()).map((t) => (
         <option key={t.address} value={t.ticker}>${t.ticker}</option>
       ))}

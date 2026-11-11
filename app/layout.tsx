@@ -4,7 +4,7 @@ import { Space_Grotesk, IBM_Plex_Mono } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { ConfigProvider } from '@/components/config-provider'
 import { SiteHeader } from '@/components/site-header'
-import { DockNav } from '@/components/dock-nav'
+import { HeroVisibilityProvider } from '@/components/hero-visibility'
 import { AbstractWaveDepth } from '@/components/abstract-wave-depth'
 import { getServerConfig } from '@/lib/config.server'
 import './globals.css'
@@ -36,14 +36,15 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className={`${grotesk.variable} ${plexMono.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false} disableTransitionOnChange>
           <ConfigProvider initial={config}>
+            <HeroVisibilityProvider>
             <div className="relative min-h-dvh overflow-x-clip">
               <div aria-hidden="true" className="site-backdrop pointer-events-none fixed inset-0 -z-10 hidden dark:block" />
               <div aria-hidden="true" className="site-backdrop-light pointer-events-none fixed inset-0 -z-10 dark:hidden" />
               <AbstractWaveDepth />
               <div className="relative z-10"><SiteHeader /></div>
-              <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-32 pt-6 sm:px-6">{children}</main>
-              <DockNav />
+              <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-14 pt-6 sm:px-6">{children}</main>
             </div>
+            </HeroVisibilityProvider>
           </ConfigProvider>
         </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
