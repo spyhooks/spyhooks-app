@@ -180,3 +180,102 @@
   .abstract-wave-depth { will-change: auto; transform: none !important; }
   .abstract-wave-band { animation: none !important; }
 }
+
+/* === SpyHooks Hexa Tech styles === */
+/* SpyHooks Hexa Tech / Token Cards — opt-in visual layer only.
+   Apply class "spy-token-hexa" to the <li> card element in TokenCard.
+   No token, wallet, API or navigation logic is changed. */
+
+li.spy-token-hexa {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #f6f6f7;
+  border: 1px solid rgba(228, 230, 234, .92) !important;
+  border-radius: 29px;
+  background:
+    radial-gradient(ellipse 86% 55% at 15% -10%, rgba(255,255,255,.93), transparent 70%),
+    radial-gradient(ellipse 48% 63% at 108% 20%, rgba(255,113,0,.2), transparent 79%),
+    linear-gradient(164deg, #f0f1f3 0%, #c4c6ca 23%, #83858a 39%, #222226 58%, #101012 73%, #101012 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 11px 26px rgba(0,0,0,.24);
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+
+/* Metallic faceted hexagons from right, subdued to keep figures legible */
+li.spy-token-hexa::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url('/spyhooks-hexa-pattern.svg');
+  background-size: 72% 77%;
+  background-repeat: no-repeat;
+  background-position: 104% 0%;
+  opacity: .9;
+  mix-blend-mode: multiply;
+}
+
+li.spy-token-hexa::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 48% 38% at 102% 4%,rgba(255,137,39,.33),transparent 78%);
+}
+
+li.spy-token-hexa:hover,
+li.spy-token-hexa:focus-within {
+  border-color: #ff8a2e !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.77), 0 14px 34px rgba(0,0,0,.34), 0 0 19px rgba(255,112,12,.16);
+}
+
+/* On pale metallic top, use ink colors for clarity. */
+li.spy-token-hexa > div:first-child { color: #101115; }
+li.spy-token-hexa > div:first-child h3 { color: #111217; font-weight: 800; }
+li.spy-token-hexa > div:first-child p,
+li.spy-token-hexa > div:first-child p span,
+li.spy-token-hexa > div:first-child div[title] { color: #292b30 !important; }
+li.spy-token-hexa > div:first-child span[title] { color: #202127 !important; }
+li.spy-token-hexa > div:first-child button { color: #111217; border-color: rgba(40,40,45,.34); background: rgba(255,255,255,.6); }
+li.spy-token-hexa > div:first-child > span:last-child {
+  background: linear-gradient(180deg,#ff991f,#df5d00) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(129,49,0,.16);
+}
+
+li.spy-token-hexa > div:nth-child(2) { color: #f1f1f2; }
+li.spy-token-hexa > div:nth-child(2) .text-muted-foreground { color: #d3d3d6 !important; }
+li.spy-token-hexa > div:nth-child(2) [role="progressbar"] {
+  background: rgba(6,6,8,.50) !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.23);
+}
+li.spy-token-hexa > div:nth-child(2) [role="progressbar"] > div {
+  background: linear-gradient(90deg,#ec6a02,#ff9d32) !important;
+  box-shadow: 0 0 7px rgba(255,115,8,.30);
+}
+
+li.spy-token-hexa > div:nth-child(3) { color: #fff; }
+li.spy-token-hexa > div:nth-child(3) .text-muted-foreground { color: #c5c5c9 !important; }
+li.spy-token-hexa > div:nth-child(3) > div:nth-child(2) { border-left: 1px solid rgba(245,245,245,.2); padding-left: 12px; }
+li.spy-token-hexa > div:nth-child(3) span { color: #fff; }
+
+li.spy-token-hexa > a[href^="/swap"],
+li.spy-token-hexa > a.spy-token-hexa-swap {
+  border: 1px solid rgba(255,178,96,.95) !important;
+  color: #fff !important;
+  background: linear-gradient(180deg, #ff8b20 0%, #f16e08 54%, #d95300 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.38), 0 3px 13px rgba(255,91,0,.28);
+  font-weight: 700;
+}
+li.spy-token-hexa > a[href^="/swap"]:hover,
+li.spy-token-hexa > a.spy-token-hexa-swap:hover {
+  border-color: #ffd0a0 !important;
+  background: linear-gradient(180deg, #ffa94c, #f2740d) !important;
+  box-shadow: 0 5px 20px rgba(255,110,5,.34), inset 0 1px 0 rgba(255,255,255,.47);
+}
+@media (prefers-reduced-motion: reduce) {
+  li.spy-token-hexa { transition: none; }
+}
+
