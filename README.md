@@ -32,8 +32,9 @@ The platform brings launchpad token data, token lifecycle information, and marke
 | **Token Workspace** | Switch between token discovery and additional market-oriented views from the homepage. |
 | **Swap Interface** | Access token swap workflows for supported tokens and connect a compatible Web3 wallet. |
 | **Token & Market Statistics** | View available token prices, market capitalization, volume, and launch statistics where data can be retrieved. |
-| **$SPYHOOKS Information** | View project token information, when available, from the dedicated token page. |
+| **$SPYHOOKS Information** | View the project token overview, reference contract address, supply, and available fee details on the token page. |
 | **Responsive UI** | Navigate a dark-themed interface with updated navigation and a collapsible homepage hero. |
+| **SPY Intelligence (in development)** | Trade-feed and wallet-tracking tools are being developed; availability and production integration have not yet been verified. |
 
 Market metrics, contract checks, and displayed statuses depend on network conditions, provider availability, and the scope of the underlying checks.
 
@@ -47,6 +48,23 @@ Market metrics, contract checks, and displayed statuses depend on network condit
 | SPY Scanner | [/spy](https://spyhooks.app/spy) | Read-only contract inspection and preliminary risk signals |
 | $SPYHOOKS | [/token](https://spyhooks.app/token) | Project token overview |
 | Documentation | [/docs](https://spyhooks.app/docs) | Project concepts, routing, swaps, and configuration |
+
+## $SPYHOOKS Token
+
+The official Spyhooks token page publishes the following $SPYHOOKS contract address on Robinhood Chain:
+
+```text
+0xf3055c8ded42f94807f8d749339c2d0666d94601
+```
+
+- **Network:** Robinhood Chain
+- **Fee wallet:** `0xc0acb9cb2cf00d6760faa4cd189a39845be5f4d8`
+- **Token page:** [spyhooks.app/token](https://spyhooks.app/token)
+- **Explorer:** [View contract address on Blockscout](https://robinhoodchain.blockscout.com/token/0xf3055c8ded42f94807f8d749339c2d0666d94601)
+- **Supply displayed on the token page:** 1,000,000,000
+- **Router fee displayed on the token page:** 0.50%
+
+> **Source and verification:** This contract address is published in the indexed content of the project’s [official token page](https://spyhooks.app/token) (checked November 12, 2026). Some client-rendered views may display different or missing contract information. This is a verification of the website’s published information, **not an independent audit** of token ownership or smart-contract safety. Confirm the contract on the official website and block explorer before trading.
 
 ## SPY Contract Scanner
 
@@ -71,6 +89,16 @@ Trending Tokens presents available Pons market data in a dedicated view, includi
 - Periodic refresh with a clear indication when cached or stale information is displayed.
 
 Rankings and metrics depend on the configured data provider and can change rapidly. They are not investment recommendations.
+
+## SPY Intelligence — Development Preview
+
+A separate SPY Intelligence workstream is being developed around an activity feed and wallet-oriented market exploration. The planned/experimental scope includes:
+
+- Recent BUY/SELL transaction activity and contract-address filtering.
+- Wallet tracking and follow-style watch functionality.
+- Auto-refreshing activity views where a supported provider supplies fresh trade data.
+
+**Status:** In development. This section documents ongoing work, not a claim that the feature is publicly deployed or that all tracking and trade data is currently functional.
 
 ## How Spyhooks Fits the Token Lifecycle
 
@@ -199,6 +227,8 @@ API behavior and response completeness depend on configuration and external serv
 - [ ] Strengthen swap testing, transaction safety, and network compatibility.
 - [ ] Review contract-scanning coverage and Uniswap v4 hook-specific analysis.
 - [ ] Expand automated tests and production observability.
+- [ ] Verify and release SPY Intelligence live-trade and wallet-tracking workflows.
+- [ ] Keep $SPYHOOKS contract details consistent across the homepage, token page, Swap interface, and project announcements.
 
 See [GitHub Issues](https://github.com/spyhooks/spyhooks-app/issues) for tracked work and proposals. Implemented UI or API routes should not be taken as evidence that every live integration has been fully verified.
 
@@ -231,6 +261,7 @@ Bug reports, documentation corrections, and feature proposals are welcome. Read 
 - **Website:** https://spyhooks.app
 - **SPY Scanner:** https://spyhooks.app/spy
 - **Swap:** https://spyhooks.app/swap
+- **$SPYHOOKS Token:** https://spyhooks.app/token
 - **Documentation:** https://spyhooks.app/docs
 - **Repository:** https://github.com/spyhooks/spyhooks-app
 
