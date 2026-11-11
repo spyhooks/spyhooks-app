@@ -1,11 +1,11 @@
 import { Hero } from '@/components/hero'
-import { TokenBoard } from '@/components/token-board'
+import { TokenWorkspace } from '@/components/token-workspace'
 
 export default function Page() {
   return (
     <>
       <Hero />
-      <TokenBoard />
+      <TokenWorkspace />
     </>
   )
 }
