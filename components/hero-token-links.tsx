@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Check, Copy, ExternalLink } from 'lucide-react'
 import { useConfig } from '@/components/config-provider'
 import { OnchainTokenStats } from '@/components/onchain-token-stats'
-import { LiveTokenPrice } from '@/components/live-token-price'
 
 const ZERO_ADDRESS = /^0x0{40}$/i
 const VALID_CA = /^0x[a-fA-F0-9]{40}$/
@@ -32,14 +31,14 @@ export function HeroTokenLinks() {
   return (
     <section
       aria-label={`${siteName} token overview`}
-      className="relative isolate w-full min-h-[550px] overflow-hidden rounded-[24px] bg-[#0c0b0c] text-white shadow-[0_16px_55px_rgba(0,0,0,.45)]"
+      className="relative isolate w-full min-h-[474px] overflow-hidden rounded-[24px] bg-[#0c0b0c] text-white shadow-[0_16px_55px_rgba(0,0,0,.45)]"
     >
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 select-none bg-[url('/spyhooks-token-card-bg.webp')] bg-[length:100%_100%] bg-center bg-no-repeat"
       />
 
-      <div className="relative z-10 flex min-h-[550px] flex-col px-7 pb-8 pt-9 sm:px-8">
+      <div className="relative z-10 flex min-h-[474px] flex-col px-7 pb-8 pt-9 sm:px-8">
         {/* Static logo only: no mouse tilt, cube faces or 3D borders. */}
         <div className="flex shrink-0 items-center justify-center">
           <img
@@ -61,9 +60,7 @@ export function HeroTokenLinks() {
           </span>
         </div>
 
-        <LiveTokenPrice />
-
-        <div className="mt-3">
+        <div className="mt-4">
           <OnchainTokenStats />
         </div>
 
@@ -74,10 +71,10 @@ export function HeroTokenLinks() {
           <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-white/25 bg-black/65 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,.035)]">
             <div
               className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]"
-              title={configured ? ca : 'Not configured'}
+              title={configured ? ca : 'TBA'}
             >
               <code className="block w-max whitespace-nowrap font-mono text-[9px] leading-5 text-white sm:text-[10px]">
-                {configured ? ca : 'Not configured'}
+                {configured ? ca : 'TBA'}
               </code>
             </div>
             <button
