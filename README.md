@@ -6,7 +6,7 @@
 
 **Token discovery, contract intelligence, and swap tools for Robinhood Chain.**
 
-[**Launch App**](https://spyhooks.app) · [**SPY Scanner**](https://spyhooks.app/spy) · [**Swap**](https://spyhooks.app/swap) · [**Documentation**](https://spyhooks.app/docs) · [**Report an Issue**](https://github.com/spyhooks/spyhooks-app/issues)
+[**Launch App**](https://spyhooks.app) · [**SPY Scanner**](https://spyhooks.app/spy) · [**SPY Intelligence**](https://spyhooks.app/intelligence) · [**Compare Tokens**](https://spyhooks.app/compare) · [**Swap**](https://spyhooks.app/swap) · [**Documentation**](https://spyhooks.app/docs) · [**Report an Issue**](https://github.com/spyhooks/spyhooks-app/issues)
 
 </div>
 
@@ -16,38 +16,45 @@
 
 Spyhooks is a Web3 application focused on token discovery, bonding-curve activity, contract inspection, and token swaps on **Robinhood Chain**.
 
-The platform brings launchpad token data, token lifecycle information, and market-oriented tools together in one responsive interface. Spyhooks is built to make emerging markets easier to explore while clearly distinguishing available on-chain evidence from estimates or unavailable data.
+The platform brings launchpad token data, token lifecycle information, market comparison, transaction activity, and trading utilities together in one responsive workspace. Spyhooks aims to make emerging markets easier to explore while distinguishing verifiable on-chain information from estimates or unavailable data.
 
-> **Project status:** The application is under active development. Some features require supported contracts, configured data providers, and a connected wallet. Displayed market data can be delayed or unavailable.
+> **Project status:** The application is under active development. New interface and API features are available in the source repository; this does not guarantee that every feature is deployed to the production website or that external market-data services are always available. Some functions require supported contracts, configured providers, and a compatible wallet.
 
 ## Platform Features
 
 | Feature | Description |
 | --- | --- |
 | **Live Token Discovery** | Browse emerging tokens with search, sorting, and lifecycle filters. |
-| **Bonding-Curve Lifecycle** | Follow tokens through **On Curve**, **Graduating**, and **Surfaced** stages when supporting data is available. |
-| **Trending Tokens** | Explore Pons tokens ranked using available 24-hour trading volume and market metrics, with token search and links to swap or view contracts. |
-| **SPY Contract Scanner** | Inspect a Robinhood Chain token contract through a read-only scan, including contract metadata, Pons factory registration, launch stage, and available curve information. |
-| **SPY Risk Score** | View preliminary, evidence-based risk indicators and scan coverage, with explicit limitations for checks that are not performed. **Not a security audit.** |
-| **Token Workspace** | Switch between token discovery and additional market-oriented views from the homepage. |
-| **Swap Interface** | Access token swap workflows for supported tokens and connect a compatible Web3 wallet. |
-| **Token & Market Statistics** | View available token prices, market capitalization, volume, and launch statistics where data can be retrieved. |
-| **$SPYHOOKS Information** | View the project token overview, reference contract address, supply, and available fee details on the token page. |
-| **Responsive UI** | Navigate a dark-themed interface with updated navigation and a collapsible homepage hero. |
-| **SPY Intelligence (in development)** | Trade-feed and wallet-tracking tools are being developed; availability and production integration have not yet been verified. |
+| **Bonding-Curve Lifecycle** | Follow **On Curve**, **Graduating**, and **Surfaced** stages when supported by available data. |
+| **Pons Trending Tokens** | Explore token activity and available market metrics with refreshed cards, search, and handling for cached or unavailable provider data. |
+| **SPY Intelligence** | Dedicated dashboard and read-only trade activity feed with token-address filtering, subject to provider coverage and rate limits. |
+| **Token Comparison** | Compare two tokens side by side, including available metadata, price, market cap, volume, liquidity, and lifecycle information. |
+| **Trade Calculator** | Workspace utility for indicative trading calculations; results are not executable quotes. |
+| **Workspace Sidebar** | Persistent navigation between token discovery, intelligence, comparison, and calculator views. |
+| **SPY Contract Scanner** | Read-only contract inspection with token details, Pons provenance, available curve data, and preliminary risk indicators. |
+| **SPY Risk Score** | Coverage-aware heuristics using available holder concentration, upgradeability signals, and applicable creator-tax data. **Not an audit or safety certification.** |
+| **Swap Interface** | Supported token swap workflows and compatible Web3 wallet connection. |
+| **Token & Market Statistics** | Show available prices, market capitalization, activity, and launch statistics with source-dependent limitations. |
+| **$SPYHOOKS Information** | Project token overview, published contract address, supply, and fee details. |
+| **Responsive UI** | Token Board and workspace improvements, updated navigation, and a collapsible homepage hero. |
 
-Market metrics, contract checks, and displayed statuses depend on network conditions, provider availability, and the scope of the underlying checks.
+Displayed market values, contract checks, and token status depend on chain conditions and the coverage of underlying data sources.
 
 ## Explore the App
 
-| Section | URL | Purpose |
+| Section | Route | Purpose |
 | --- | --- | --- |
-| Token Discovery | [spyhooks.app](https://spyhooks.app) | Live tokens, lifecycle filters, and the token workspace |
-| Swap | [/swap](https://spyhooks.app/swap) | Token swap interface |
-| Launchpads | [/launchpads](https://spyhooks.app/launchpads) | Supported launchpad information |
-| SPY Scanner | [/spy](https://spyhooks.app/spy) | Read-only contract inspection and preliminary risk signals |
-| $SPYHOOKS | [/token](https://spyhooks.app/token) | Project token overview |
-| Documentation | [/docs](https://spyhooks.app/docs) | Project concepts, routing, swaps, and configuration |
+| Token Discovery | `/` | Live tokens, lifecycle filters, and workspace |
+| SPY Intelligence | `/intelligence` | Trade activity dashboard and token filtering |
+| Token Comparison | `/compare` | Side-by-side comparison of token and market information |
+| Trade Calculator | `/calculator` | Indicative trading calculations |
+| SPY Scanner | `/spy` | Read-only contract inspection and preliminary risk signals |
+| Swap | `/swap` | Supported token swap interface |
+| Launchpads | `/launchpads` | Launchpad information |
+| $SPYHOOKS Token | `/token` | Official token overview |
+| Documentation | `/docs` | Project concepts and application documentation |
+
+Routes shown here are implemented in the repository. Production availability depends on deployment and configuration.
 
 ## $SPYHOOKS Token
 
@@ -60,45 +67,53 @@ The official Spyhooks token page publishes the following $SPYHOOKS contract addr
 - **Network:** Robinhood Chain
 - **Fee wallet:** `0xc0acb9cb2cf00d6760faa4cd189a39845be5f4d8`
 - **Token page:** [spyhooks.app/token](https://spyhooks.app/token)
-- **Explorer:** [View contract address on Blockscout](https://robinhoodchain.blockscout.com/token/0xf3055c8ded42f94807f8d749339c2d0666d94601)
+- **Explorer:** [View contract on Blockscout](https://robinhoodchain.blockscout.com/token/0xf3055c8ded42f94807f8d749339c2d0666d94601)
 - **Supply displayed on the token page:** 1,000,000,000
 - **Router fee displayed on the token page:** 0.50%
 
-> **Source and verification:** This contract address is published in the indexed content of the project’s [official token page](https://spyhooks.app/token) (checked November 12, 2026). Some client-rendered views may display different or missing contract information. This is a verification of the website’s published information, **not an independent audit** of token ownership or smart-contract safety. Confirm the contract on the official website and block explorer before trading.
+> **Source and verification:** The contract address and figures above reflect project-published information, not an independent audit or verification of token ownership, contract safety, or trading conditions. Always confirm details against the official token page and block explorer before transacting.
 
-## SPY Contract Scanner
+## SPY Contract Scanner & Risk Score
 
-The **SPY Scanner** provides a read-only overview for supported Robinhood Chain and Pons contracts. Depending on the contract and available data, results may include:
+The **SPY Scanner** provides read-only inspection of supported Robinhood Chain contracts. Depending on data coverage, results may include:
 
-- Contract identification and basic token metadata.
-- Pons factory registration and token lifecycle status.
-- Curve and routing details, including available fee-related parameters.
-- Indicative price, market-cap, and reserve information where applicable.
-- Preliminary risk indicators with a visible **coverage** percentage.
-- Warnings and links to relevant contract or swap views.
+- Contract address, token name, symbol, and other metadata.
+- Pons factory registration, launch stage, and relevant curve data.
+- Available pricing, reserves, fee information, and explorer links.
+- Holder-concentration indicators and applicable creator-tax parameters.
+- Upgradeability signals based on available explorer information and EIP-1967 storage checks.
+- A preliminary Risk Score with a visible **coverage** percentage and warnings when evidence is missing.
 
-**Important limitations:** A scan does **not** establish that a token is safe. Honeypot simulation, comprehensive permission audits, and sellability testing are not included in the displayed preliminary checks. Missing evidence must not be interpreted as a passing result.
+**Important limitations:** The score does not prove a token is safe, liquid, sellable, or free of harmful contract behavior. It is not a full contract audit, honeypot simulation, or transaction-safety guarantee. Unavailable checks are not treated as passing.
 
 ## Trending Tokens
 
-Trending Tokens presents available Pons market data in a dedicated view, including metrics such as:
+The Trending Tokens workspace provides available Pons market information, including 24-hour trading volume, price change, capitalization, and trading activity where supplied by the provider.
 
-- 24-hour trading volume and price change.
-- Market capitalization and trader count, where provided.
-- Contract address search, explorer links, and swap entry points.
-- Periodic refresh with a clear indication when cached or stale information is displayed.
+The latest source changes refine token-card presentation and add rate-limit handling, cached snapshots, and unavailable-data states. Ranking and refresh behavior remain provider-dependent; trending is not an investment recommendation.
 
-Rankings and metrics depend on the configured data provider and can change rapidly. They are not investment recommendations.
+## SPY Intelligence
 
-## SPY Intelligence — Development Preview
+The application now includes a dedicated **SPY Intelligence** page and a server-side **Live Trade Feed** integration. The read-only feed is designed to show available BUY/SELL activity, transaction references, trader addresses, and selected-token activity.
 
-A separate SPY Intelligence workstream is being developed around an activity feed and wallet-oriented market exploration. The planned/experimental scope includes:
+- Token contract-address filtering where supported.
+- Trade activity snapshots with provider attribution and update status.
+- Cached or stale responses when the upstream source is temporarily unavailable.
+- Rate-limit-aware requests and reduced sampling when operating without a configured provider key.
 
-- Recent BUY/SELL transaction activity and contract-address filtering.
-- Wallet tracking and follow-style watch functionality.
-- Auto-refreshing activity views where a supported provider supplies fresh trade data.
+**Current scope:** The dashboard and trade-feed route have been implemented and passed repository TypeScript and production-build checks. Data coverage is limited by the configured upstream provider; this is **not** a claim that a network-wide feed, accurate wallet profitability, or full smart-money tracking has been validated. Expanded wallet intelligence, watch functionality, and advanced analytics remain areas for further development.
 
-**Status:** In development. This section documents ongoing work, not a claim that the feature is publicly deployed or that all tracking and trade data is currently functional.
+## Token Comparison
+
+The **Token Comparison** page provides a side-by-side view of two token addresses. Depending on available information, it can display token metadata, Pons lifecycle status, price, 24-hour volume and change, market capitalization, and liquidity.
+
+The comparison APIs use Robinhood Chain RPC and available external market data. Market metrics may describe a token's **most liquid indexed pool** rather than all of its markets; missing values are left unavailable instead of estimated as facts. Comparison data is informational and should not be interpreted as an execution quote.
+
+## Trade Calculator & Workspace Navigation
+
+The Trade Calculator is accessible from its own route in the shared workspace. It provides indicative calculations and does not execute transactions or replace actual swap quotes, which can vary due to fees, liquidity, slippage, and price impact.
+
+A persistent Workspace Sidebar allows users to move between supported platform tools without losing access to workspace navigation.
 
 ## How Spyhooks Fits the Token Lifecycle
 
@@ -106,7 +121,7 @@ A separate SPY Intelligence workstream is being developed around an activity fee
 Supported Launchpad
        |
        v
-   On Curve
+    On Curve
        |
        v
    Graduating
@@ -114,12 +129,13 @@ Supported Launchpad
        v
     Surfaced
        |
-       +--> Contract inspection (SPY Scanner)
-       +--> Token discovery & market views
-       +--> Supported swap / routing workflows
+       +--> SPY Scanner and risk indicators
+       +--> Token discovery, trending, and comparison
+       +--> SPY Intelligence trade activity
+       +--> Workspace calculator and supported swap workflows
 ```
 
-Lifecycle labels reflect available application data; they should not be treated as proof that any specific transaction route or contract is safe or available.
+Lifecycle labels reflect available application data, not guarantees of transaction-route availability or contract safety.
 
 ## Technology Stack
 
@@ -139,32 +155,37 @@ Lifecycle labels reflect available application data; they should not be treated 
 ```text
 app/
   api/
-    eth-usd/             ETH/USD data
-    launch-stats/        Launch statistics
-    onchain-token-stats/ On-chain token statistics
-    pons/                Token discovery and lifecycle data
-    pons-trending/       Trending Pons market data
-    spy/scan/            Read-only contract scanning and risk signals
-    token-live-price/    Available token price data
-  docs/                  Documentation
-  launchpads/            Launchpad information
-  spy/                   SPY Scanner page
-  swap/                  Swap page
-  token/                 $SPYHOOKS information
-components/              UI, token workspace, scanner, wallet and swap components
-lib/                     Shared application and blockchain utilities
-public/                  Public assets
-.github/workflows/       Automated checks
+    compare/market/        Indexed pool market information
+    compare/token/         Token identification via RPC
+    intelligence/trades/   Read-only trade feed
+    eth-usd/               ETH/USD data
+    launch-stats/          Launch statistics
+    onchain-token-stats/   On-chain token statistics
+    pons/                  Token discovery and lifecycle data
+    pons-trending/         Trending Pons market data
+    spy/scan/              Contract inspection and risk signals
+    token-live-price/      Available token price data
+  calculator/              Trade Calculator page
+  compare/                 Token Comparison page
+  intelligence/            SPY Intelligence page
+  docs/                    Documentation
+  launchpads/              Launchpad information
+  spy/                     SPY Scanner page
+  swap/                    Swap page
+  token/                   $SPYHOOKS information
+components/                 UI, workspace, token, scanner and swap components
+lib/                        Shared application and blockchain utilities
+public/                     Public assets
+.github/workflows/          Automated checks
 ```
 
 ## Local Development
 
 ### Requirements
 
-- Node.js version compatible with the project's Next.js release.
-- pnpm.
-- Git.
-- Required application configuration and access to supported data providers.
+- Node.js version compatible with the current Next.js release.
+- pnpm and Git.
+- Required local configuration and access to supported data providers.
 
 ### Installation
 
@@ -174,7 +195,7 @@ cd spyhooks-app
 pnpm install --frozen-lockfile
 ```
 
-Provide the application configuration required for your local environment, then start the development server:
+Provide the local application configuration, then run:
 
 ```bash
 pnpm dev
@@ -182,7 +203,7 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-> Some environment-specific configuration is maintained separately from the public repository. A fresh clone may require additional configuration before live data and wallet-dependent features operate.
+> Some environment-specific configuration is maintained separately from this public repository. A fresh clone may require additional configuration before wallet-dependent features or live external data operate. Never place provider secrets in `public/`.
 
 ### Validation
 
@@ -191,46 +212,50 @@ pnpm exec tsc --noEmit
 pnpm run build
 ```
 
-The production build uses the project's configured Next.js build command. Passing TypeScript and build checks does not verify provider uptime, on-chain correctness, contract security, or end-to-end wallet transactions.
+These checks validate types and build output; they do not test provider uptime, live blockchain responses, contract safety, or end-to-end swaps.
 
 ## Server API Routes
 
 | Route | Purpose |
 | --- | --- |
 | `GET /api/pons` | Token discovery and lifecycle data |
-| `GET /api/pons-trending` | Trending token market data |
-| `GET /api/spy/scan` | Contract scan results for a supplied contract address |
+| `GET /api/pons-trending` | Trending market data and provider fallback behavior |
+| `GET /api/intelligence/trades` | Read-only trade activity feed; optional token filtering |
+| `GET /api/compare/token` | Token metadata and Pons recognition |
+| `GET /api/compare/market` | Indexed market and top-pool metrics |
+| `GET /api/spy/scan` | Contract inspection and preliminary risk signals |
 | `GET /api/launch-stats` | Available launch statistics |
 | `GET /api/onchain-token-stats` | On-chain token statistics |
 | `GET /api/token-live-price` | Available token pricing information |
 | `GET /api/eth-usd` | ETH/USD pricing data |
 
-API behavior and response completeness depend on configuration and external services. Endpoints are not a guarantee of data availability or a public service-level commitment.
+Endpoint availability and completeness depend on configuration, network connectivity, and external data services.
 
 ## Development Roadmap
 
-### Implemented in the application
+### Implemented in the repository
 
 - [x] Token discovery and lifecycle views.
-- [x] Homepage Token Workspace and refreshed Hexa Tech token visuals.
-- [x] Pons Trending Tokens component and server route.
-- [x] SPY Contract Scanner page, API, and preliminary risk scoring.
-- [x] Swap interface and wallet integration UI.
-- [x] Updated header, navigation, and collapsible hero.
-- [x] TypeScript and production build checks in the development workflow.
+- [x] Token Board and persistent Workspace Sidebar.
+- [x] Pons Trending Tokens component and API rate-limit handling.
+- [x] SPY Contract Scanner and coverage-aware preliminary risk scoring.
+- [x] SPY Intelligence dashboard and read-only trade-feed API.
+- [x] Token Comparison page and supporting token/market APIs.
+- [x] Trade Calculator page.
+- [x] Swap and wallet connection interface.
+- [x] TypeScript and Next.js build validation in the development workflow.
 
 ### Ongoing priorities
 
-- [ ] Validate live scanner results and risk indicators against additional contract scenarios.
-- [ ] Improve RPC resilience, provider monitoring, and stale-data handling.
-- [ ] Expand token search, filtering, and market-data accuracy.
-- [ ] Strengthen swap testing, transaction safety, and network compatibility.
-- [ ] Review contract-scanning coverage and Uniswap v4 hook-specific analysis.
-- [ ] Expand automated tests and production observability.
-- [ ] Verify and release SPY Intelligence live-trade and wallet-tracking workflows.
-- [ ] Keep $SPYHOOKS contract details consistent across the homepage, token page, Swap interface, and project announcements.
+- [ ] Verify trade-feed coverage, provider rate limits, and live runtime behavior in the target deployment.
+- [ ] Expand wallet intelligence, address watch features, and market analytics.
+- [ ] Validate scanner results against additional contracts and improve coverage.
+- [ ] Improve RPC resilience, monitoring, and stale-data handling.
+- [ ] Expand swap testing and network compatibility.
+- [ ] Add automated runtime and integration tests.
+- [ ] Keep token information consistent across the website and announcements.
 
-See [GitHub Issues](https://github.com/spyhooks/spyhooks-app/issues) for tracked work and proposals. Implemented UI or API routes should not be taken as evidence that every live integration has been fully verified.
+See [GitHub Issues](https://github.com/spyhooks/spyhooks-app/issues) for issues and proposals. A successful build does not prove that every live data integration is currently functioning.
 
 ## Development Workflow
 
@@ -240,26 +265,29 @@ See [GitHub Issues](https://github.com/spyhooks/spyhooks-app/issues) for tracked
 | `develop` | Development and integration |
 | `feature/*` | Isolated feature changes |
 
-Features are developed in focused commits, reviewed through pull requests, and validated with GitHub Actions before merging.
+Features are developed in focused commits, reviewed through pull requests, and checked with GitHub Actions before merging.
 
 ## Security & Disclaimer
 
-- Never commit private keys, seed phrases, passwords, or provider secrets.
-- Treat any assets under `public/` as publicly accessible after deployment.
-- Independently verify token contract addresses and transaction parameters.
-- Review wallet prompts before confirming a transaction.
-- Treat market estimates and risk scores as informational, not as a guarantee of safety.
+- Never commit private keys, seed phrases, passwords, or provider credentials.
+- Treat everything under `public/` as accessible after deployment.
+- Independently verify contract addresses, token metadata, and transaction parameters.
+- Review wallet prompts before signing or submitting any transaction.
+- Treat market estimates, comparisons, and risk indicators as informational.
 
-**Spyhooks has not been represented here as independently audited.** Interacting with digital assets involves financial, smart-contract, and network risks. Nothing in this repository or application constitutes investment advice.
+**Spyhooks is not represented as independently audited.** Digital asset activity involves financial, smart-contract, liquidity, and network risks. Nothing in this repository or application is investment advice.
 
 ## Contributing
 
-Bug reports, documentation corrections, and feature proposals are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and use [GitHub Issues](https://github.com/spyhooks/spyhooks-app/issues) to discuss changes.
+Bug reports, documentation corrections, and feature proposals are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and use [GitHub Issues](https://github.com/spyhooks/spyhooks-app/issues).
 
 ## Links
 
 - **Website:** https://spyhooks.app
 - **SPY Scanner:** https://spyhooks.app/spy
+- **SPY Intelligence:** https://spyhooks.app/intelligence
+- **Token Comparison:** https://spyhooks.app/compare
+- **Trade Calculator:** https://spyhooks.app/calculator
 - **Swap:** https://spyhooks.app/swap
 - **$SPYHOOKS Token:** https://spyhooks.app/token
 - **Documentation:** https://spyhooks.app/docs
@@ -269,8 +297,10 @@ Bug reports, documentation corrections, and feature proposals are welcome. Read 
 
 <div align="center">
 
-**SPYHOOKS**  
-*Built for discovery. Designed for the curve.*  
+**SPYHOOKS**
+
+*Built for discovery. Designed for the curve.*
+
 Robinhood Chain Ecosystem
 
 </div>
