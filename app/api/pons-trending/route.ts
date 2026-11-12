@@ -7,7 +7,9 @@ export const dynamic = 'force-dynamic'
 // the same thing as the newest Pons launches feed.
 const MAIN_PONS = '0x39dBED3a2bd333467115dE45665cC57F813C4571'
 const CRIUS_URL = 'https://api.crius.sh/v1/robinhood/tokens?list=top_volume&launchpad=pons&window=24h&limit=100'
-const CACHE_MS = 120_000
+const CACHE_MS = process.env.CRIUS_API_KEY?.trim() ? 120_000 : 15 * 60_000
+const DEFAULT_COOLDOWN_MS = 15 * 60_000
+let blockedUntil = 0
 const MIN_AGE_MS = 24 * 60 * 60 * 1000
 const MIN_VOLUME_USD = 1_000
 const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/
@@ -118,7 +120,15 @@ async function load(): Promise<TrendingToken[]> {
       cache: 'no-store',
       signal: controller.signal,
     })
-    if (!response.ok) throw new Error(`Data provider returned ${response.status}`)
+    if (!response.ok) {
+      if ([401, 403, 429].includes(response.status)) {
+        const retrySeconds = Number(response.headers.get('retry-after'))
+        blockedUntil = Date.now() + (Number.isFinite(retrySeconds) && retrySeconds > 0
+          ? Math.min(retrySeconds * 1000, 24 * 60 * 60 * 1000)
+          : DEFAULT_COOLDOWN_MS)
+      }
+      throw new Error(`Data provider returned ${response.status}`)
+    }
     const payload: unknown = await response.json()
     if (!payload || typeof payload !== 'object' || !('data' in payload) || !Array.isArray(payload.data)) {
       throw new Error('Invalid trending provider response')
@@ -177,6 +187,11 @@ export async function GET() {
     })
   }
 
+  if (now < blockedUntil) {
+    if (snapshot) return NextResponse.json({ tokens: snapshot.data, updatedAt: snapshot.at, source: 'Crius · cached snapshot', stale: true }, { headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json({ tokens: [], stale: true, updatedAt: null, source: 'Crius temporarily unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
+  }
+
   try {
     if (!inflight) inflight = load()
     const tokens = await inflight
@@ -185,22 +200,10 @@ export async function GET() {
       headers: { 'Cache-Control': 'no-store' },
     })
   } catch (error) {
-    if (snapshot) {
-      return NextResponse.json({ tokens: snapshot.data, updatedAt: snapshot.at, source: 'Crius · Pons · 24h USD volume', stale: true }, {
-        headers: { 'Cache-Control': 'no-store' },
-      })
-    }
-    console.error('[pons-trending]', error)
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 5_000)
-    try {
-      const headers: Record<string, string> = { accept: 'application/json' }
-      if (process.env.CRIUS_API_KEY) headers['x-api-key'] = process.env.CRIUS_API_KEY
-      const main = await fetchMainPons(headers, controller.signal)
-      return NextResponse.json({ tokens: [main], updatedAt: Date.now(), source: 'Verified PONS identity; trending provider unavailable', stale: true }, { headers: { 'Cache-Control': 'no-store' } })
-    } finally {
-      clearTimeout(timeout)
-    }
+    console.warn('[pons-trending] Provider unavailable', error instanceof Error ? error.message : 'unknown error')
+    if (blockedUntil < Date.now()) blockedUntil = Date.now() + 2 * 60_000
+    if (snapshot) return NextResponse.json({ tokens: snapshot.data, updatedAt: snapshot.at, source: 'Crius · cached snapshot', stale: true }, { headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json({ tokens: [], stale: true, updatedAt: null, source: 'Crius temporarily unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
   } finally {
     inflight = null
   }
