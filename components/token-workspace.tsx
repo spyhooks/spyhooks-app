@@ -1,19 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { RadioTower, TrendingUp, Wallet, ExternalLink, RefreshCcw } from 'lucide-react'
+import Link from 'next/link'
+import { Wallet, ExternalLink, RefreshCcw } from 'lucide-react'
 import { TokenBoard } from '@/components/token-board'
 import { PonsTrending } from '@/components/pons-trending'
 import { useWallet } from '@/components/use-wallet'
 import { useConfig } from '@/components/config-provider'
-import { cn } from '@/lib/utils'
-
-type View = 'live' | 'trending' | 'portfolio'
-const menu: { id: View; label: string; Icon: typeof RadioTower }[] = [
-  { id: 'live', label: 'Live Tokens', Icon: RadioTower },
-  { id: 'trending', label: 'Trending', Icon: TrendingUp },
-  { id: 'portfolio', label: 'Portofolio', Icon: Wallet },
-]
+import { WorkspaceSidebar, type WorkspaceView } from '@/components/workspace-sidebar'
 
 function PortfolioOverview() {
   const { account, connect } = useWallet()
@@ -97,30 +91,14 @@ function PortfolioOverview() {
 }
 
 export function TokenWorkspace() {
-  const [view, setView] = useState<View>('live')
+  const [view, setView] = useState<WorkspaceView>('live')
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('workspace')
+    if (requested === 'live' || requested === 'trending' || requested === 'portfolio') setView(requested)
+  }, [])
   return (
-    <div className="relative min-w-0">
-      <aside aria-label="Token workspace navigation" className="mb-5 w-full rounded-2xl border border-white/10 bg-[#111112]/95 p-2 min-[1400px]:absolute min-[1400px]:right-[calc(100%+12px)] min-[1400px]:top-0 min-[1400px]:mb-0 min-[1400px]:w-[clamp(125px,calc((100vw-1152px)/2-28px),208px)]">
-        <div className="flex flex-wrap gap-1 min-[1400px]:flex-col" role="group" aria-label="Token views">
-          {menu.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setView(id)}
-              aria-pressed={view === id}
-              className={cn(
-                'inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-medium transition-colors sm:text-sm min-[1400px]:flex-none min-[1400px]:justify-start',
-                view === id
-                  ? 'border border-[#ff781f]/45 bg-gradient-to-r from-[#6b2f0b] to-[#28160d] text-white shadow-[inset_0_1px_0_rgba(255,160,85,0.13)]'
-                  : 'border border-transparent text-zinc-300 hover:bg-white/5 hover:text-white'
-              )}
-            >
-              <Icon className={cn('size-4 shrink-0', view === id ? 'text-[#ff8b36]' : 'text-zinc-300')} aria-hidden="true" />
-              <span className="truncate">{label}</span>
-            </button>
-          ))}
-        </div>
-      </aside>
+    <div className="grid min-w-0 gap-5 lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start">
+      <WorkspaceSidebar activeView={view} onViewChange={setView} />
       <div className="min-w-0">
         {view === 'live' && <TokenBoard key="live" />}
         {view === 'trending' && <PonsTrending />}

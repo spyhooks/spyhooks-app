@@ -53,7 +53,7 @@ export const fallbackConfig: SiteConfig = {
   links: { x: '', xHandle: '', telegram: '', website: '', docs: '/docs' },
   fees: { wallet: '', bps: 50 },
   swap: { routerAddress: '' },
-  api: { tokensUrl: '' },
+  api: { tokensUrl: '/api/pons' },
   hero: { eyebrow: '', title: '', subtitle: '' },
   nav: [
     { key: 'tokens', label: 'Tokens', href: '/' },

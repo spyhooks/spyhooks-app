@@ -54,6 +54,7 @@ type ScanResponse = {
   }
   warnings: string[]
   risk?: RiskAssessment
+  evidence?: { sourceVerified: boolean | null; top10Percent: number | null; proxyIndicator: boolean | null }
 }
 
 function toNumber(value: bigint | number | null | undefined): number | null {
@@ -180,10 +181,9 @@ async function getBlockscoutSignals(address: Address, totalSupply: bigint | null
   else if (sourceData && (typeof sourceData.source_code === 'string' || typeof sourceData.is_verified === 'boolean')) {
     verified = typeof sourceData.is_verified === 'boolean' ? sourceData.is_verified : true
   }
-  if (typeof addressData?.proxy_type === 'string') proxy = addressData.proxy_type.trim().length > 0
-  else if (addressData && Object.hasOwn(addressData, 'proxy_type') && addressData.proxy_type === null) proxy = false
-  else if (typeof sourceData?.is_proxy === 'boolean') proxy = sourceData.is_proxy
-  else if (typeof sourceData?.proxy_type === 'string') proxy = sourceData.proxy_type.length > 0
+  if (typeof addressData?.proxy_type === 'string' && addressData.proxy_type.trim()) proxy = true
+  else if (sourceData?.is_proxy === true) proxy = true
+  else if (typeof sourceData?.proxy_type === 'string' && sourceData.proxy_type.length > 0) proxy = true
 
   if (holdersResult && typeof holdersResult === 'object' && totalSupply && totalSupply > 0n) {
     const data = holdersResult as {
@@ -291,6 +291,7 @@ export async function GET(request: NextRequest) {
         quoteReserveEth = numFromUnits(reserves[0] as bigint, 18)
         tokenReserve = numFromUnits(reserves[1] as bigint, decimals ?? 18)
       }
+      if (nativeQuote !== true) quoteReserveEth = null
       if (quoteReserveEth !== null && tokenReserve && tokenReserve > 0) {
         priceEth = quoteReserveEth / tokenReserve
         if (ethUsdValue) priceUsd = priceEth * ethUsdValue
@@ -306,10 +307,19 @@ export async function GET(request: NextRequest) {
       warnings.push('Valid contract found, but it is not registered in the configured Pons factory.')
     }
 
-    const explorerSignals = await getBlockscoutSignals(address as Address, totalSupply)
+    const [explorerSignals, implementationSlot, beaconSlot] = await Promise.all([
+      getBlockscoutSignals(address as Address, totalSupply),
+      client.getStorageAt({ address: address as Address, slot: '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc' }).catch(() => undefined),
+      client.getStorageAt({ address: address as Address, slot: '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50' }).catch(() => undefined),
+    ])
+    const hasImplementation = (slot: `0x${string}` | undefined) => !!slot && /^0x[0-9a-f]+$/i.test(slot) && BigInt(slot) !== 0n
+    const eip1967Detected = hasImplementation(implementationSlot) || hasImplementation(beaconSlot)
+    const eip1967Checked = implementationSlot !== undefined && beaconSlot !== undefined
+    const proxySignal = eip1967Detected || explorerSignals.proxy === true
+      ? true : eip1967Checked ? false : null
     const risk = assessRisk({
       verified: explorerSignals.verified,
-      proxy: explorerSignals.proxy,
+      proxy: proxySignal,
       top10Percent: explorerSignals.top10Percent,
       creatorTaxBps: exists ? toNumber(launch?.creatorTaxBps) : null,
       ponsFactory: launchResult !== null ? exists : null,
@@ -329,7 +339,7 @@ export async function GET(request: NextRequest) {
       address,
       source: exists ? 'Pons / Robinhood Chain' : 'Robinhood Chain contract',
       explorerUrl: `${explorerBase}/address/${address}`,
-      swapUrl: exists && nativeQuote !== false ? `/swap?ca=${address}` : null,
+      swapUrl: exists && nativeQuote === true && !((launch?.sweptAt as bigint | undefined) && launch.sweptAt > 0n) ? `/swap?ca=${address}` : null,
       token: {
         name: typeof nameResult === 'string' ? nameResult : null,
         symbol: typeof symbolResult === 'string' ? symbolResult : null,
@@ -362,6 +372,7 @@ export async function GET(request: NextRequest) {
       },
       warnings,
       risk,
+      evidence: { sourceVerified: explorerSignals.verified, top10Percent: explorerSignals.top10Percent, proxyIndicator: proxySignal },
     }
 
     return NextResponse.json(response)

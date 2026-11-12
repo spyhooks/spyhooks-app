@@ -44,7 +44,9 @@ function mergeAndSaveLogos(rows: TokenRow[]): TokenRow[] {
 
 export function useTokens() {
   const { api } = useConfig()
-  const url = api.tokensUrl || null
+  // Live Pons feed is independent of the $SPYHOOKS CA. An empty config must
+  // never disable the scanner or silently turn the board into an empty list.
+  const url = api.tokensUrl?.trim() || '/api/pons'
 
   const { data, isLoading, error, mutate } = useSWR<TokenRow[]>(
     url,
@@ -62,14 +64,15 @@ export function useTokens() {
         throw new Error(`Failed to load tokens: ${res.status}`)
       }
 
-      const rows = (await res.json()) as TokenRow[]
-      return mergeAndSaveLogos(rows)
+      const rows: unknown = await res.json()
+      if (!Array.isArray(rows)) throw new Error('Live token API returned an invalid response')
+      return mergeAndSaveLogos(rows as TokenRow[])
     },
     {
       revalidateOnMount: true,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      refreshInterval: url ? 10000 : 0,
+      refreshInterval: 10000,
       dedupingInterval: 0,
       keepPreviousData: true,
       shouldRetryOnError: true,
@@ -80,7 +83,7 @@ export function useTokens() {
 
   return {
     tokens: data ?? [],
-    isLoading: Boolean(url) && isLoading,
+    isLoading,
     error,
     refreshTokens: () => mutate(),
   }

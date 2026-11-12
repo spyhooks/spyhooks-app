@@ -1,6 +1,10 @@
-/** A transparent preliminary risk-signal heuristic, NOT an audit or safety certification. */
+/**
+ * Preliminary, coverage-aware heuristics. This score is NOT an audit, a
+ * sellability guarantee, or a prediction of losses. Provenance and verified
+ * source are informational checks, not points for token safety.
+ */
 export type RiskCheck = {
-  key: 'verified' | 'holders' | 'creatorTax' | 'proxy' | 'ponsFactory'
+  key: 'holders' | 'creatorTax' | 'proxy'
   label: string
   maxPoints: number
   points: number | null
@@ -24,48 +28,47 @@ export function assessRisk(input: {
   proxy: boolean | null
   ponsFactory: boolean | null
 }): RiskAssessment {
+  const holder = input.top10Percent
+  const tax = input.creatorTaxBps
   const checks: RiskCheck[] = [
     {
-      key: 'ponsFactory', label: 'Pons factory provenance', maxPoints: 20,
-      points: input.ponsFactory === null ? null : input.ponsFactory ? 20 : 0,
-      detail: input.ponsFactory === null ? 'Not checked' : input.ponsFactory
-        ? 'Factory registration confirmed on-chain (not an audit)'
-        : 'Not registered in the configured Pons factory',
+      key: 'holders', label: 'Top 10 holder concentration', maxPoints: 40,
+      points: holder === null ? null : holder <= 15 ? 40 : holder <= 30 ? 30 : holder <= 50 ? 18 : holder <= 70 ? 7 : 0,
+      detail: holder === null ? 'Not available from the explorer' : `${holder.toFixed(2)}% of supply across top 10 addresses. Pools and locked contracts may be included.`,
     },
     {
-      key: 'verified', label: 'Source code verified', maxPoints: 25,
-      points: input.verified === null ? null : input.verified ? 25 : 0,
-      detail: input.verified === null ? 'Not checked' : input.verified ? 'Verified by Blockscout' : 'Not verified on Blockscout',
+      key: 'proxy', label: 'Upgradeability signal', maxPoints: 35,
+      points: input.proxy === null ? null : input.proxy ? 0 : 35,
+      detail: input.proxy === null ? 'Not checked' : input.proxy
+        ? 'Proxy/implementation indicator detected; admin controls need manual review'
+        : 'No EIP-1967 implementation or beacon slot detected; other upgrade methods remain possible',
     },
     {
-      key: 'holders', label: 'Top 10 concentration', maxPoints: 35,
-      points: input.top10Percent === null ? null : input.top10Percent <= 10 ? 35 : input.top10Percent <= 25 ? 27 : input.top10Percent <= 40 ? 18 : input.top10Percent <= 60 ? 8 : 0,
-      detail: input.top10Percent === null ? 'Not checked' : `${input.top10Percent.toFixed(2)}% of total supply held by the ten largest addresses (may include pools/contracts)`,
-    },
-    {
-      key: 'creatorTax', label: 'Pons creator tax', maxPoints: 20,
-      points: input.creatorTaxBps === null ? null : input.creatorTaxBps <= 100 ? 20 : input.creatorTaxBps <= 300 ? 14 : input.creatorTaxBps <= 500 ? 7 : 0,
-      detail: input.creatorTaxBps === null ? 'Not checked / not applicable' : `${(input.creatorTaxBps / 100).toFixed(2)}% creator tax (other fees may apply)`,
-    },
-    {
-      key: 'proxy', label: 'Upgradeable proxy indicator', maxPoints: 20,
-      points: input.proxy === null ? null : input.proxy ? 0 : 20,
-      detail: input.proxy === null ? 'Not checked' : input.proxy ? 'Possible proxy/upgradeable contract reported by Blockscout' : 'No proxy classification reported by Blockscout',
+      key: 'creatorTax', label: 'Pons creator tax', maxPoints: 25,
+      points: tax === null ? null : tax <= 100 ? 25 : tax <= 300 ? 16 : tax <= 500 ? 8 : 0,
+      detail: tax === null ? 'Not checked / not applicable' : `${(tax / 100).toFixed(2)}% creator tax, excluding other fees`,
     },
   ]
-  const possiblePoints = checks.reduce((n, c) => n + c.maxPoints, 0)
-  const eligible = checks.filter((c) => c.points !== null)
-  const evaluatedMax = eligible.reduce((n, c) => n + c.maxPoints, 0)
-  const evaluatedPoints = eligible.reduce((n, c) => n + (c.points ?? 0), 0)
+  const possiblePoints = checks.reduce((sum, c) => sum + c.maxPoints, 0)
+  const evaluated = checks.filter((c) => c.points !== null)
+  const evaluatedMax = evaluated.reduce((sum, c) => sum + c.maxPoints, 0)
+  const evaluatedPoints = evaluated.reduce((sum, c) => sum + (c.points ?? 0), 0)
   const coverage = Math.round((evaluatedMax / possiblePoints) * 100)
-  // Two independent checks are required; provenance plus creator tax can produce
-  // a LIMITED-EVIDENCE score even when Blockscout is unavailable. Unknown checks
-  // remain excluded from both numerator and denominator.
-  const score = coverage >= 30 && eligible.length >= 2
-    ? Math.round((evaluatedPoints / evaluatedMax) * 100) : null
-  const label = score === null ? 'Insufficient data' : coverage < 60 ? 'Limited evidence' : score >= 75 ? 'Fewer observed flags' : score >= 45 ? 'Some risk signals' : 'Elevated risk signals'
+  // At least two different evidence sources and 55% weighted coverage.
+  // A high partial score must never be marketed as “safe”.
+  const score = evaluated.length >= 2 && coverage >= 55
+    ? Math.round((evaluatedPoints / evaluatedMax) * 100)
+    : null
+  const label = score === null ? 'Insufficient evidence'
+    : coverage < 85 ? 'Partial assessment'
+    : score < 45 ? 'Multiple risk indicators' : score < 75 ? 'Some risk indicators' : 'Fewer observed risk indicators'
   return {
-    score, coverage, evaluatedPoints, possiblePoints, label, checks,
-    disclaimer: 'Preliminary signal score from available checks only. When coverage is low, a high score is not evidence of overall safety. Not an audit, honeypot test, guarantee of sellability, or proof a token is safe. Unknown signals are excluded from scoring; check coverage before interpreting the score.',
+    score,
+    coverage,
+    evaluatedPoints,
+    possiblePoints,
+    label,
+    checks,
+    disclaimer: 'Preliminary on-chain signals only. Missing checks are never treated as passing. This score cannot establish token safety, sellability, liquidity security, or honeypot status. Confirm contract controls and trading behavior independently.',
   }
 }
