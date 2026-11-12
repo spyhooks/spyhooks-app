@@ -2,32 +2,29 @@
 
 import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
-import {
-  Activity, ArrowLeftRight, ArrowUpRight, Check, Clipboard, Copy, ExternalLink,
-  FileCode2, Info, Layers3, LockKeyhole, ScanSearch, Search, ShieldCheck,
-  ShieldQuestion, Wallet, AlertTriangle, LoaderCircle,
-} from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, Check, ChevronDown, Clipboard, Copy, ExternalLink, Fingerprint, Info, LoaderCircle, Radar, Search, Shield, ShieldCheck, ShieldQuestion } from 'lucide-react'
 
 type ScanResponse = {
   status: 'ok' | 'external' | 'invalid' | 'error'
   message: string
   address: string
-  source: string
   explorerUrl: string
   swapUrl: string | null
-  token: { name: string | null; symbol: string | null; decimals: number | null; totalSupply: string | null; logoUrl: string | null }
+  token: { name: string | null; symbol: string | null; decimals: number | null; totalSupply: string | null }
   pons: {
-    exists: boolean; scanStatus: 'curve' | 'graduating' | 'graduated' | 'external'
-    curveAddress: string | null; deployer: string | null; creatorFeeRecipient: string | null
-    pairToken: string | null; poolFee: number | null; tickSpacing: number | null
-    creatorTaxBps: number | null; phase: number | null; nativeQuote: boolean | null
+    exists: boolean
+    scanStatus: 'curve' | 'graduating' | 'graduated' | 'external'
+    curveAddress: string | null
+    deployer: string | null
+    creatorFeeRecipient: string | null
+    pairToken: string | null
+    poolFee: number | null
+    tickSpacing: number | null
+    creatorTaxBps: number | null
+    nativeQuote: boolean | null
     readyToGraduate: boolean | null
   }
-  metrics: {
-    ethUsd: number | null; priceEth: number | null; priceUsd: number | null
-    marketCapEth: number | null; marketCapUsd: number | null
-    quoteReserveEth: number | null; tokenReserve: number | null
-  }
+  metrics: { priceUsd: number | null; marketCapUsd: number | null; quoteReserveEth: number | null }
   warnings: string[]
   risk?: {
     score: number | null
@@ -36,203 +33,221 @@ type ScanResponse = {
     disclaimer: string
     checks: Array<{ key: string; label: string; maxPoints: number; points: number | null; detail: string }>
   }
+  evidence?: { sourceVerified: boolean | null; top10Percent: number | null; proxyIndicator: boolean | null }
 }
 
-const CA_REGEX = /^0x[a-fA-F0-9]{40}$/
-const panel = 'rounded-[22px] border border-white/[0.13] bg-[linear-gradient(150deg,rgba(30,30,31,0.96),rgba(10,10,11,0.98))] shadow-[0_14px_38px_rgba(0,0,0,0.25)]'
-const heading = 'flex items-center gap-2.5 text-[15px] font-semibold tracking-tight text-white sm:text-base'
-const muted = 'text-[11px] font-medium uppercase tracking-[0.11em] text-zinc-500'
+const CA_RE = /^0x[a-f\d]{40}$/i
+const card = 'rounded-[24px] border border-white/[0.13] bg-[linear-gradient(150deg,#18181a,#0e0e10_72%)] shadow-[0_15px_42px_rgba(0,0,0,.22)]'
 
-function shortCA(value: string | null) {
-  return value ? `${value.slice(0, 7)}…${value.slice(-5)}` : '—'
+function short(value: string | null | undefined) {
+  return value && value.length > 16 ? `${value.slice(0, 7)}…${value.slice(-5)}` : value || '—'
 }
-function fmt(value: number | null | undefined, type: 'usd' | 'eth' | 'number' = 'number') {
+function money(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return '—'
-  const prefix = type === 'usd' ? '$' : ''
-  const suffix = type === 'eth' ? ' ETH' : ''
-  if (value >= 1e9) return `${prefix}${(value / 1e9).toFixed(2)}B${suffix}`
-  if (value >= 1e6) return `${prefix}${(value / 1e6).toFixed(2)}M${suffix}`
-  if (value >= 1e3) return `${prefix}${(value / 1e3).toFixed(2)}K${suffix}`
-  if (value === 0) return `${prefix}0${suffix}`
-  if (value < 0.000001) return `${prefix}${value.toExponential(2)}${suffix}`
-  return `${prefix}${value.toLocaleString('en-US', { maximumFractionDigits: value < 1 ? 8 : 4 })}${suffix}`
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`
+  if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`
+  if (value !== 0 && value < .0001) return `$${value.toExponential(2)}`
+  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 6 })}`
 }
-function stageLabel(result: ScanResponse | null) {
-  if (!result) return 'Awaiting scan'
-  if (result.pons.scanStatus === 'curve') return 'On curve'
+function stage(result: ScanResponse) {
+  if (result.status === 'invalid') return 'No contract detected'
+  if (!result.pons.exists) return 'Outside configured Pons factory'
+  if (result.pons.scanStatus === 'curve') return 'On the Pons curve'
   if (result.pons.scanStatus === 'graduating') return 'Graduating'
-  if (result.pons.scanStatus === 'graduated') return 'Surfaced'
-  return 'Outside configured factory'
+  return 'Surfaced / Graduated'
 }
-function DisplayLine({ label, value, copy }: { label: string; value: string; copy?: string | null }) {
+function scoreColor(score: number | null) {
+  if (score === null) return '#aaa7af'
+  if (score >= 80) return '#41dba4'
+  if (score >= 50) return '#ffad50'
+  return '#ff7181'
+}
+function scoreCategory(score: number | null, coverage: number) {
+  if (score === null) return 'Insufficient evidence'
+  if (coverage < 85) return 'Preliminary · Limited checks'
+  if (score >= 80) return 'Fewer observed risk indicators'
+  if (score >= 50) return 'Some risk indicators'
+  return 'Multiple risk indicators'
+}
+function DetailLine({ label, value, copy }: { label: string; value: string; copy?: string | null }) {
   const [copied, setCopied] = useState(false)
-  return <div className="flex min-w-0 items-center justify-between gap-2 border-b border-white/[0.08] py-2.5 last:border-b-0">
-    <span className="shrink-0 text-[12px] text-zinc-400">{label}</span>
+  return <div className="flex min-w-0 items-center justify-between gap-3 border-b border-white/[.075] py-3 last:border-b-0">
+    <span className="shrink-0 text-xs text-zinc-400">{label}</span>
     <div className="flex min-w-0 items-center gap-1.5">
-      <span className="truncate text-right font-mono text-[11px] font-medium text-zinc-100 sm:text-xs" title={copy || value}>{value}</span>
-      {copy && <button type="button" aria-label={`Copy ${label}`} title={`Copy ${label}`} onClick={async()=>{try{await navigator.clipboard.writeText(copy);setCopied(true)}catch{}}} className="shrink-0 rounded-md p-1 text-zinc-500 transition hover:bg-white/10 hover:text-white">{copied ? <Check size={13}/> : <Copy size={13}/>}</button>}
+      <span className="truncate text-right text-xs font-medium text-zinc-100" title={copy || value}>{value}</span>
+      {copy && <button type="button" aria-label={`Copy ${label}`} onClick={async () => { try { await navigator.clipboard.writeText(copy); setCopied(true); window.setTimeout(() => setCopied(false), 1500) } catch {} }} className="shrink-0 rounded-md p-1 text-zinc-400 hover:bg-white/10 hover:text-white">{copied ? <Check size={14}/> : <Copy size={14}/>}</button>}
     </div>
   </div>
 }
 
 export function SpyScanner({ defaultContract }: { defaultContract?: string }) {
-  const [ca, setCa] = useState(defaultContract ?? '')
+  const [ca, setCa] = useState(defaultContract || '')
   const [result, setResult] = useState<ScanResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [lastCA, setLastCA] = useState('')
-  const valid = CA_REGEX.test(ca.trim())
+  const [scannedCA, setScannedCA] = useState('')
 
-  async function scan(address = ca) {
-    const clean = address.trim()
-    if (!CA_REGEX.test(clean) || loading) {
-      if (!CA_REGEX.test(clean)) setError('Masukkan Contract Address lengkap (0x + 40 karakter heksadesimal).')
+  async function scan(value = ca) {
+    const clean = value.trim()
+    if (!CA_RE.test(clean) || loading) {
+      if (!CA_RE.test(clean)) setError('Enter a valid 0x contract address (40 hexadecimal characters).')
       return
     }
     setError('')
     setLoading(true)
-    setLastCA(clean)
     setResult(null)
     try {
       const response = await fetch(`/api/spy/scan?address=${encodeURIComponent(clean)}`, { cache: 'no-store' })
       const data = await response.json() as ScanResponse
       setResult(data)
-      if (!response.ok) setError(data.message || 'Scanner could not read the contract.')
-    } catch {
-      setError('Unable to reach the scanner API. Check the network or try again.')
-    } finally { setLoading(false) }
+      setScannedCA(clean)
+      if (!response.ok) setError(data.message || 'Unable to scan this contract.')
+    } catch { setError('Unable to contact the scanner. Please try again.') }
+    finally { setLoading(false) }
   }
-  function onSubmit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); void scan() }
+  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void scan() }
   async function paste() {
-    try { const value = await navigator.clipboard.readText(); setCa(value.trim()); setError('') }
-    catch { setError('Clipboard access is not permitted. Paste the CA manually.') }
+    try { const text = await navigator.clipboard.readText(); setCa(text.trim()); setError('') }
+    catch { setError('Clipboard access was blocked. Paste the CA manually.') }
   }
 
-  const external = result?.pons.exists === false
-  const isNativeCurve = result?.pons.nativeQuote === true && result?.pons.scanStatus === 'curve'
-  const showEthMetrics = isNativeCurve
-  const checks = [
-    { label: 'Contract bytecode', value: result ? (result.status === 'invalid' ? 'Not detected' : 'Detected') : 'Not scanned', ok: result ? result.status !== 'invalid' : null },
-    { label: 'Pons factory registration', value: result ? (result.pons.exists ? 'Registered' : 'Not found') : 'Not scanned', ok: result ? result.pons.exists : null },
-    { label: 'Trading stage', value: stageLabel(result), ok: result ? result.pons.exists : null },
-    { label: 'Native ETH curve', value: result?.pons.nativeQuote == null ? 'Unknown' : result.pons.nativeQuote ? 'Yes' : 'No', ok: result?.pons.nativeQuote ?? null },
-    { label: 'Graduation readiness', value: result?.pons.readyToGraduate == null ? 'Unknown' : result.pons.readyToGraduate ? 'Ready' : 'Not yet', ok: null },
-    { label: 'Honeypot / sell simulation', value: 'Not checked', ok: null },
-  ]
+  const valid = result && (result.status === 'ok' || result.status === 'external')
+  const risk = valid ? result.risk : undefined
+  const score = risk?.score ?? null
+  const coverage = risk?.coverage ?? 0
+  const tone = scoreColor(score)
+  const isCurve = result?.pons.scanStatus === 'curve'
+  const isNativeCurve = isCurve && result?.pons.nativeQuote === true
+  const warnings = result?.warnings ?? []
 
-  return <div className="spy-scanner-page w-full space-y-5 pb-12 text-white sm:space-y-6">
-    <header className="relative overflow-hidden rounded-[24px] border border-white/[0.1] bg-[radial-gradient(ellipse_at_78%_0%,rgba(255,120,31,0.13),transparent_43%),linear-gradient(120deg,rgba(18,18,19,0.98),rgba(7,7,8,0.95))] px-5 py-8 text-center sm:px-9 sm:py-10">
-      <div className="pointer-events-none absolute right-[-60px] top-[-100px] size-80 rounded-full border border-[#ff781f]/10" aria-hidden="true"/>
-      <div className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full border border-[#ff781f]/40 bg-[#ff781f]/10 px-4 py-1.5 font-mono text-[10px] tracking-[0.21em] text-[#ff9c50]">
-        <ScanSearch size={13}/> SPY · CONTRACT SCANNER
-      </div>
-      <h1 className="text-3xl font-bold tracking-tight text-white sm:text-[42px]">Contract Scanner</h1>
-      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-zinc-400">On-chain contract overview for Robinhood Chain and Pons tokens. View factory verification, curve data, and routing details in one place.</p>
-      <form onSubmit={onSubmit} className="relative mx-auto mt-6 flex w-full max-w-[920px] flex-col gap-2 rounded-[18px] border border-white/15 bg-[#09090a] p-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.25)] sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-left">
-          <FileCode2 size={19} className="shrink-0 text-zinc-500"/>
-          <input className="min-w-0 w-full bg-transparent font-mono text-[12px] text-white outline-none placeholder:font-sans placeholder:text-zinc-600 sm:text-sm" value={ca} onChange={e=>{setCa(e.target.value);setError('')}} placeholder="Enter token contract address (0x...)" aria-label="Token contract address" spellCheck={false}/>
-          <button type="button" title="Paste CA" aria-label="Paste contract address" onClick={paste} className="shrink-0 rounded-md p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white"><Clipboard size={16}/></button>
+  return <div className="spy-scanner-page mx-auto w-full max-w-[1220px] space-y-5 pb-14 text-white">
+    <div className={`${card} relative overflow-hidden px-5 py-7 sm:px-9 sm:py-9`}>
+      <div className="pointer-events-none absolute -right-24 -top-32 size-72 rounded-full border border-[#ff781f]/15" aria-hidden="true"/>
+      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[.18em] text-[#ff9b52]"><Radar size={14}/> SPY / CONTRACT SCANNER</div>
+      <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Know what you&apos;re trading.</h1>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">Explore Pons contract details and evidence-based risk signals on Robinhood Chain.</p>
+      <form onSubmit={submit} className="mt-6 flex flex-col gap-2 rounded-2xl border border-white/15 bg-[#09090b] p-2 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5">
+          <Fingerprint size={18} className="shrink-0 text-zinc-500"/>
+          <input value={ca} onChange={event => { setCa(event.target.value); setError('') }} className="min-w-0 w-full bg-transparent font-mono text-xs text-white outline-none placeholder:text-zinc-500 sm:text-sm" placeholder="Paste a token contract address (0x...)" aria-label="Token contract address" spellCheck={false}/>
+          <button type="button" onClick={paste} aria-label="Paste contract address" className="shrink-0 p-1 text-zinc-400 hover:text-white"><Clipboard size={17}/></button>
         </div>
-        <button type="submit" disabled={!valid || loading} className="inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-b from-[#ff973c] to-[#ff741b] px-6 text-sm font-bold text-[#16100b] shadow-[0_3px_18px_rgba(255,120,31,0.17)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">
-          {loading ? <LoaderCircle size={16} className="animate-spin"/> : <Search size={16}/>} {loading ? 'Scanning...' : 'Scan Contract'}
+        <button type="submit" disabled={!CA_RE.test(ca.trim()) || loading} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#ff781f] px-6 text-sm font-bold text-[#150d07] transition hover:brightness-110 disabled:opacity-40">
+          {loading ? <LoaderCircle className="animate-spin" size={16}/> : <Search size={16}/>} {loading ? 'Scanning...' : 'Scan contract'}
         </button>
       </form>
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-zinc-500">
-        <span>Read-only · No wallet signature required</span>
-        {defaultContract && CA_REGEX.test(defaultContract) && <><span className="text-zinc-700">·</span><button className="font-medium text-[#ff994b] hover:underline" type="button" onClick={()=>{setCa(defaultContract);void scan(defaultContract)}}>Scan $SPYHOOKS</button></>}
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+        <span>Read-only · No wallet connection required</span>
+        {defaultContract && CA_RE.test(defaultContract) && <button type="button" className="text-[#ff9c52] hover:underline" onClick={() => { setCa(defaultContract); void scan(defaultContract) }}>· Scan $SPYHOOKS</button>}
       </div>
-      {error && <p role="alert" className="mx-auto mt-4 max-w-[920px] rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-left text-sm text-amber-200">{error}</p>}
-    </header>
+      {error && <p role="alert" className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-sm text-amber-200">{error}</p>}
+    </div>
 
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <section className={`${panel} min-w-0 p-5`}>
-        <h2 className={heading}><ShieldQuestion size={18} className="text-[#ff8b2b]"/> SPY Risk Score</h2>
-        <div className="mt-5 flex items-center gap-4">
-          <div className="relative flex size-[112px] shrink-0 items-center justify-center rounded-full p-[9px]" style={{background: `conic-gradient(#ff8628 ${result?.risk?.score ?? 0}%, #343039 0%)`}}>
-            <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[#111113]">
-              <span className="text-3xl font-bold tabular-nums">{result?.risk?.score ?? '—'}</span>
-              <span className="text-[10px] text-zinc-500">/ 100</span>
+    {!result && !loading && <div className={`${card} flex flex-col items-center gap-2 px-5 py-12 text-center`}>
+      <ShieldQuestion size={32} className="text-[#ff8b2b]"/>
+      <h2 className="mt-2 font-semibold">Ready to scan</h2>
+      <p className="max-w-md text-sm text-zinc-400">Enter a CA to see the SPY risk assessment, Pons trading stage and contract information.</p>
+    </div>}
+    {loading && <div className={`${card} flex items-center justify-center gap-3 px-6 py-12 text-sm text-zinc-400`}><LoaderCircle size={21} className="animate-spin text-[#ff8b2b]"/> Checking contract and on-chain signals...</div>}
+
+    {result && <>
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
+        <section className={`${card} min-w-0 overflow-hidden`}>
+          <div className="border-b border-white/[.09] px-5 py-5 sm:px-7">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[.18em] text-[#ff9b52]"><Shield size={15}/> SPY RISK ASSESSMENT</div>
+                <h2 className="mt-2 break-words text-2xl font-bold tracking-tight">{result.token.name || 'Contract overview'}</h2>
+                <p className="mt-1 text-sm text-zinc-400">{result.token.symbol ? `$${result.token.symbol}` : 'Unknown ticker'} · Robinhood Chain</p>
+              </div>
+              <span className="rounded-full border border-[#ff781f]/35 bg-[#ff781f]/10 px-3 py-1.5 text-[11px] font-medium text-[#ffab70]">{stage(result)}</span>
+            </div>
+            <div className="mt-3 flex items-center gap-2"><span className="break-all font-mono text-[11px] text-zinc-500">{short(result.address)}</span><button type="button" className="text-zinc-400 hover:text-white" aria-label="Copy contract address" onClick={() => { void navigator.clipboard.writeText(result.address).catch(() => {}) }}><Copy size={13}/></button></div>
+          </div>
+          <div className="grid gap-6 px-5 py-6 sm:grid-cols-[164px_1fr] sm:px-7">
+            <div className="flex items-center justify-center">
+              <div className="flex size-[158px] shrink-0 items-center justify-center rounded-full p-[9px]" style={{background:`conic-gradient(${tone} ${score ?? 0}%, #303034 0)`}}>
+                <div className="flex size-full flex-col items-center justify-center rounded-full bg-[#111113]">
+                  <strong className="text-5xl font-bold tabular-nums" style={{color: score === null ? '#ddd' : tone}}>{score ?? '—'}</strong>
+                  <span className="mt-1 text-xs text-zinc-500">/ 100</span>
+                </div>
+              </div>
+            </div>
+            <div className="min-w-0 self-center">
+              <div className="text-lg font-semibold">{scoreCategory(score,coverage)}</div>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">{score === null ? 'Not enough independent checks to issue a meaningful score.' : 'Higher score means fewer risk indicators among the checks that completed.'}</p>
+              <div className="mt-4 flex items-center justify-between gap-2 text-xs"><span className="text-zinc-400">Scan coverage</span><span className="font-mono text-zinc-200">{coverage}%</span></div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-[#ff781f] transition-[width]" style={{width:`${coverage}%`}}/></div>
+              <p className="mt-2 text-[11px] leading-5 text-zinc-500">{coverage < 85 ? 'Limited evidence. Missing checks are never counted as passing.' : 'Multiple checks completed. This is still not an audit.'}</p>
             </div>
           </div>
-          <div className="min-w-0 space-y-1.5">
-            <p className="text-[15px] font-semibold text-white">{!result ? 'Ready to scan' : result.risk?.label ?? 'No score available'}</p>
-            <p className="text-[11px] leading-5 text-zinc-400">{!result ? 'Scan a contract to calculate evidence-based risk signals.' : result.message}</p>
-            <div className="inline-flex rounded-full border border-[#ff781f]/25 bg-[#ff781f]/10 px-2.5 py-1 text-[10px] text-[#ffac65]">{result?.risk?.coverage != null && result.risk.coverage < 60 ? 'Low coverage · Preliminary only' : 'Preliminary · Not audited'}</div>
+          <div className="border-t border-[#ff781f]/20 bg-[#ff781f]/[.045] px-5 py-4 text-xs leading-5 text-[#ffbc89] sm:px-7"><Info size={15} className="mr-2 inline align-[-3px]"/> Preliminary indicators only. Not an audit, honeypot test, or guarantee that you can sell.</div>
+        </section>
+
+        <section className={`${card} min-w-0 p-5 sm:p-7`}>
+          <div className="flex items-center gap-2 text-base font-semibold"><ShieldCheck size={18} className="text-[#ff892f]"/> How this score works</div>
+          <p className="mt-2 text-xs leading-5 text-zinc-400">Each completed check contributes up to its weight. Unknown checks are excluded from the score and reduce coverage. A score appears only when at least two checks and 55% coverage are available.</p>
+          <div className="mt-5 space-y-0">
+            {(risk?.checks || []).map(item => {
+              const deduction = item.points === null ? null : item.maxPoints - item.points
+              return <div key={item.key} className="flex min-w-0 gap-3 border-b border-white/[.09] py-3.5 last:border-b-0">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium">{item.label}</div>
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">{item.detail}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="font-mono text-sm font-semibold" style={{color: deduction === null ? '#a1a1aa' : deduction === 0 ? '#57d9a4' : '#ff9a58'}}>{deduction === null ? 'Unknown' : deduction === 0 ? 'No penalty' : `−${deduction}`}</div>
+                  <div className="mt-1 text-[10px] text-zinc-500">Weight {item.maxPoints}</div>
+                </div>
+              </div>
+            })}
+            {!risk?.checks.length && <p className="py-8 text-sm text-zinc-500">No risk data available for this contract.</p>}
           </div>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-[10px] text-zinc-400">
+            <span className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-2 text-center text-emerald-300">80–100 · Fewer flags</span>
+            <span className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-2 text-center text-amber-200">50–79 · Some flags</span>
+            <span className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-2 py-2 text-center text-rose-300">0–49 · More flags</span>
+          </div>
+          <p className="mt-4 text-[11px] leading-5 text-zinc-500">Verification status and Pons factory membership identify the contract, but do not award risk points. Other permissions and sellability checks are not yet covered.</p>
+        </section>
+      </div>
+
+      <section className={`${card} min-w-0 p-5 sm:p-7`}>
+        <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2 font-semibold"><Radar size={18} className="text-[#ff892f]"/> Pons trading stage</div><span className="rounded-full border border-[#ff781f]/30 bg-[#ff781f]/10 px-3 py-1 text-xs text-[#ffab70]">{stage(result)}</span></div>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">{!result.pons.exists
+          ? 'This contract is not registered with the currently configured Pons factory. Its origin and trading route need independent verification.'
+          : isCurve
+            ? 'This token is trading on its Pons bonding curve. Graduation progress is not available from the verified scanner data, so no percentage is shown.'
+            : result.pons.scanStatus === 'graduating'
+              ? 'Graduation readiness was detected. Check the curve and DEX route before trading.'
+              : 'The token is marked as surfaced / graduated by the configured Pons factory. Pool trading conditions may differ from the bonding curve.'}</p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4"><div className="text-[11px] uppercase tracking-wider text-zinc-500">Pons registration</div><div className="mt-2 text-sm font-semibold">{result.pons.exists ? 'Confirmed' : 'Not confirmed'}</div></div>
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4"><div className="text-[11px] uppercase tracking-wider text-zinc-500">Quote asset</div><div className="mt-2 text-sm font-semibold">{result.pons.nativeQuote === null ? 'Unknown' : result.pons.nativeQuote ? 'Native ETH' : 'Non-native'}</div></div>
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4"><div className="text-[11px] uppercase tracking-wider text-zinc-500">Creator tax</div><div className="mt-2 text-sm font-semibold">{result.pons.creatorTaxBps == null ? 'Unknown' : `${(result.pons.creatorTaxBps / 100).toFixed(2)}%`}</div></div>
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4"><div className="text-[11px] uppercase tracking-wider text-zinc-500">Source verified</div><div className="mt-2 text-sm font-semibold">{result.evidence?.sourceVerified == null ? 'Unknown' : result.evidence.sourceVerified ? 'Yes' : 'Not verified'}</div></div>
         </div>
-        <div className="mt-4">
-          <div className="mb-1.5 flex justify-between text-xs text-zinc-400"><span>Scan coverage</span><span className="tabular-nums text-zinc-200">{result?.risk?.coverage ?? 0}%</span></div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-[#2d2d32]"><div className="h-full rounded-full bg-[#ff8628] transition-[width]" style={{width: `${result?.risk?.coverage ?? 0}%`}}/></div>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {result.swapUrl && <Link href={result.swapUrl} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff781f] px-5 py-3 text-sm font-bold text-black hover:brightness-110">Swap on SpyHooks <ArrowUpRight size={16}/></Link>}
+          {result.explorerUrl && <a href={result.explorerUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-5 py-3 text-sm font-medium text-zinc-200 hover:border-[#ff781f]/50">View contract <ExternalLink size={15}/></a>}
         </div>
-        {result?.risk?.checks ? <div className="mt-3 space-y-2">{result.risk.checks.map(check => <div key={check.key} className="flex items-start justify-between gap-2 border-b border-white/[0.06] pb-2 text-[11px] last:border-none"><div className="min-w-0"><div className="text-zinc-200">{check.label}</div><div className="text-[10px] leading-4 text-zinc-500">{check.detail}</div></div><span className="shrink-0 font-mono text-[#ffae74]">{check.points == null ? 'N/A' : `${check.points}/${check.maxPoints}`}</span></div>)}</div> : null}
-        <div className="mt-4 rounded-xl border border-[#ff781f]/15 bg-[#ff781f]/[0.055] px-3 py-2.5 text-[11px] leading-5 text-[#ddad88]"><Info size={14} className="mr-1 inline"/> {result?.risk?.disclaimer ?? 'Honeypot simulation, full permission audit, and sellability checks are not included. Unknown checks reduce coverage.'}</div>
+        {!result.swapUrl && <p className="mt-3 text-xs text-zinc-500">Direct swap is not confirmed for this contract. Review its route before trading.</p>}
       </section>
 
-      <section className={`${panel} min-w-0 p-5`}>
-        <h2 className={heading}><Activity size={18} className="text-[#ff8b2b]"/> Quick Checks</h2>
-        <div className="mt-4 divide-y divide-white/[0.075]">
-          {checks.map(item=><div key={item.label} className="flex items-center justify-between gap-2 py-2.5 text-xs">
-            <span className="min-w-0 text-zinc-400">{item.label}</span>
-            <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-medium ${item.ok === true ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300' : item.ok === false ? 'border-amber-500/25 bg-amber-500/10 text-amber-300' : 'border-white/10 bg-white/[0.04] text-zinc-300'}`}>{item.value}</span>
-          </div>)}
-        </div>
+      <section className={`${card} p-5 sm:p-7`}>
+        <details className="group">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold [&::-webkit-details-marker]:hidden"><span>Additional token & contract details</span><ChevronDown size={18} className="text-[#ff892f] transition-transform group-open:rotate-180"/></summary>
+          <div className="mt-5 grid gap-6 border-t border-white/10 pt-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div><h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Token estimates</h3><div className="mt-2"><DetailLine label="Market cap" value={isNativeCurve ? money(result.metrics.marketCapUsd) : '—'}/><DetailLine label="Price" value={isNativeCurve ? money(result.metrics.priceUsd) : '—'}/><DetailLine label="ETH reserve" value={isNativeCurve && result.metrics.quoteReserveEth != null ? `${result.metrics.quoteReserveEth.toFixed(4)} ETH` : '—'}/><DetailLine label="Supply" value={result.token.totalSupply || '—'}/></div></div>
+            <div><h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Pons routing</h3><div className="mt-2"><DetailLine label="Curve" value={short(result.pons.curveAddress)} copy={result.pons.curveAddress}/><DetailLine label="Pair token" value={short(result.pons.pairToken)} copy={result.pons.pairToken}/><DetailLine label="Deployer" value={short(result.pons.deployer)} copy={result.pons.deployer}/><DetailLine label="Fee recipient" value={short(result.pons.creatorFeeRecipient)} copy={result.pons.creatorFeeRecipient}/></div></div>
+            <div><h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Contract checks</h3><div className="mt-2"><DetailLine label="Top 10 holders" value={result.evidence?.top10Percent == null ? 'Unknown' : `${result.evidence.top10Percent.toFixed(2)}%`}/><DetailLine label="Proxy indicator" value={result.evidence?.proxyIndicator == null ? 'Unknown' : result.evidence.proxyIndicator ? 'Detected' : 'No EIP-1967 slot found'}/><DetailLine label="Pool fee" value={result.pons.poolFee == null ? '—' : String(result.pons.poolFee)}/><DetailLine label="Tick spacing" value={result.pons.tickSpacing == null ? '—' : String(result.pons.tickSpacing)}/></div></div>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-zinc-500">Curve price and market cap are approximate values only for active native-ETH curves, not post-graduation pool prices.</p>
+        </details>
       </section>
-
-      <section className={`${panel} min-w-0 p-5`}>
-        <h2 className={heading}><Layers3 size={18} className="text-[#ff8b2b]"/> Contract Overview</h2>
-        <div className="mt-4">
-          <DisplayLine label="Token name" value={result?.token.name || '—'}/>
-          <DisplayLine label="Ticker" value={result?.token.symbol ? `$${result.token.symbol}` : '—'}/>
-          <DisplayLine label="Network" value="Robinhood Chain"/>
-          <DisplayLine label="Contract" value={shortCA(result?.address ?? null)} copy={result?.address}/>
-          <DisplayLine label="Decimals" value={result?.token.decimals == null ? '—' : String(result.token.decimals)}/>
-          <DisplayLine label="Status" value={stageLabel(result)}/>
-        </div>
-      </section>
-    </div>
-
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <section className={`${panel} min-w-0 p-5`}>
-        <h2 className={heading}><Wallet size={18} className="text-[#ff8b2b]"/> Token Economics</h2>
-        <div className="mt-4">
-          <DisplayLine label="Market cap (est.)" value={showEthMetrics ? fmt(result?.metrics.marketCapUsd,'usd') : '—'}/>
-          <DisplayLine label="Spot price (est.)" value={showEthMetrics ? fmt(result?.metrics.priceUsd,'usd') : '—'}/>
-          <DisplayLine label="Total supply" value={result?.token.totalSupply || '—'}/>
-          <DisplayLine label="Reserve (native ETH)" value={showEthMetrics ? fmt(result?.metrics.quoteReserveEth,'eth') : '—'}/>
-        </div>
-        <p className="mt-3 text-[11px] leading-5 text-zinc-500">Curve estimates are only shown for active native-ETH curves, not post-graduation liquidity.</p>
-      </section>
-
-      <section className={`${panel} min-w-0 p-5`}>
-        <h2 className={heading}><FileCode2 size={18} className="text-[#ff8b2b]"/> Pons Routing</h2>
-        <div className="mt-4">
-          <DisplayLine label="Curve" value={shortCA(result?.pons.curveAddress ?? null)} copy={result?.pons.curveAddress}/>
-          <DisplayLine label="Pair token" value={shortCA(result?.pons.pairToken ?? null)} copy={result?.pons.pairToken}/>
-          <DisplayLine label="Deployer" value={shortCA(result?.pons.deployer ?? null)} copy={result?.pons.deployer}/>
-          <DisplayLine label="Fee recipient" value={shortCA(result?.pons.creatorFeeRecipient ?? null)} copy={result?.pons.creatorFeeRecipient}/>
-        </div>
-      </section>
-
-      <section className={`${panel} min-w-0 p-5`}>
-        <h2 className={heading}><AlertTriangle size={18} className="text-[#ff8b2b]"/> Warnings / Notes</h2>
-        <div className="mt-4 space-y-2">
-          {!result ? <p className="rounded-xl border border-white/10 bg-white/[0.025] p-3 text-xs leading-5 text-zinc-400">Results will appear after a contract is scanned.</p> : result.warnings.length > 0 ? result.warnings.map((w,i)=><p key={`${i}-${w}`} className="rounded-xl border border-[#ff781f]/25 bg-[#ff781f]/[0.07] p-3 text-xs leading-5 text-zinc-200">{w}</p>) : <p className="rounded-xl border border-white/10 bg-white/[0.025] p-3 text-xs leading-5 text-zinc-400">No factory-specific warnings returned. This is not a safety clearance.</p>}
-          {external && <p className="text-xs leading-5 text-zinc-500">External tokens require a separate verified indexing method.</p>}
-        </div>
-      </section>
-
-      <section className={`${panel} min-w-0 p-5`}>
-        <h2 className={heading}><ArrowLeftRight size={18} className="text-[#ff8b2b]"/> Actions & Settings</h2>
-        <div className="mt-4 space-y-2">
-          {result?.swapUrl ? <Link href={result.swapUrl} className="flex items-center justify-between rounded-xl bg-[#ff781f] px-3.5 py-3 text-xs font-semibold text-black hover:brightness-110">Swap on SpyHooks <ArrowUpRight size={15}/></Link> : <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-3 text-xs text-zinc-500">Swap link unavailable</div>}
-          {result?.explorerUrl ? <a href={result.explorerUrl} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-xl border border-white/15 bg-white/[0.035] px-3.5 py-3 text-xs font-medium text-white hover:border-[#ff781f]/45">View on Blockscout <ExternalLink size={14}/></a> : null}
-          <DisplayLine label="Pool fee" value={result?.pons.poolFee == null ? '—' : String(result.pons.poolFee)}/>
-          <DisplayLine label="Tick spacing" value={result?.pons.tickSpacing == null ? '—' : String(result.pons.tickSpacing)}/>
-          <DisplayLine label="Creator tax" value={result?.pons.creatorTaxBps == null ? '—' : `${(result.pons.creatorTaxBps / 100).toFixed(2)}%`}/>
-        </div>
-      </section>
-    </div>
-    {result && <p className="text-center text-xs text-zinc-600">Results based on current RPC responses. Last scanned CA: {shortCA(lastCA)}. Scanner is read-only and does not certify contract safety.</p>}
+      {warnings.length > 0 && <section className={`${card} p-5 sm:p-7`}><h3 className="flex items-center gap-2 text-sm font-semibold"><AlertTriangle size={16} className="text-[#ff8b2b]"/> Notes from on-chain scan</h3><div className="mt-3 space-y-2">{warnings.map((item, i) => <p key={`${i}-${item}`} className="text-xs leading-6 text-zinc-400">{item}</p>)}</div></section>}
+      <p className="text-center text-[11px] text-zinc-600">Read-only scan of {short(scannedCA)} · Evidence availability depends on the RPC and explorer.</p>
+    </>}
   </div>
 }
