@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Check, Copy, Search, Star, SlidersHorizontal } from 'lucide-react'
+import { ArrowUpRight, Check, Copy, Search, Star, SlidersHorizontal, GitCompareArrows } from 'lucide-react'
 import { useConfig } from '@/components/config-provider'
 import { useTokens } from '@/components/use-tokens'
 import { formatAge, formatEth, formatUsdMarketCap, type TokenRow } from '@/lib/tokens'
@@ -28,6 +28,18 @@ function TokenCard({ token, ethUsd, isFavorite, onToggleFavorite }: {
   const [logoFailed, setLogoFailed] = useState(false)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const progress = Math.max(0, Math.min(100, token.progress))
+  // Stable, restrained accents keep the feed calm while giving each card character.
+  // Derived from the contract address so the tint does not shift when sorting/filtering.
+  const palette = [
+    '245, 142, 78',  // warm copper
+    '131, 155, 180', // slate blue
+    '79, 165, 133',  // muted jade
+    '149, 124, 183', // soft violet
+    '101, 147, 183', // steel blue
+    '182, 137, 98',  // muted amber
+  ]
+  const colorIndex = [...token.address.toLowerCase()].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) % 1009, 0) % palette.length
+  const accent = palette[colorIndex]
 
   async function copyContract() {
     if (!token.address || copyStatus === 'copied') return
@@ -40,52 +52,38 @@ function TokenCard({ token, ethUsd, isFavorite, onToggleFavorite }: {
   }
 
   return (
-    <li className="group flex min-w-0 flex-col gap-3 rounded-[25px] border border-white/15 bg-[linear-gradient(145deg,#222225,#111113_52%,#09090a)] p-4 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.08)] transition-colors hover:border-[#ff781f]/55 sm:p-5">
-      <div className="flex min-w-0 items-start gap-3">
-        <div className="relative size-12 shrink-0 overflow-hidden rounded-full border border-white/20 bg-black/60 font-mono text-sm font-bold text-white" aria-label={`${token.ticker} token logo`}>
-          {token.logoUrl && !logoFailed ? (
-            <img src={token.logoUrl} alt={`${token.name} logo`} loading="lazy" referrerPolicy="no-referrer" onError={() => setLogoFailed(true)} className="size-full object-cover" />
-          ) : (
-            <span className="flex size-full items-center justify-center">{token.ticker.slice(0, 2)}</span>
-          )}
+    <li
+      className="group relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-[20px] border border-white/[0.16] bg-[#121417] p-3.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_10px_28px_rgba(0,0,0,0.13)] transition-[border-color,box-shadow] duration-200 hover:border-white/[0.32] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.065),0_14px_32px_rgba(0,0,0,0.18)] xl:flex-row xl:items-center xl:gap-4"
+      style={{
+        backgroundImage: `radial-gradient(ellipse 46% 125% at 100% 105%, rgba(${accent}, 0.12), transparent 78%), linear-gradient(110deg, #1a1c20 0%, #121519 48%, #0e1013 100%)`,
+      }}
+    >
+      {/* Purely decorative lines stay behind all buttons and data. */}
+      <svg aria-hidden="true" focusable="false" className="pointer-events-none absolute bottom-0 right-0 z-0 h-[80px] w-[210px] opacity-50" viewBox="0 0 210 80" fill="none">
+        <path d="M-5 85 C70 84 130 72 215 23" stroke={`rgba(${accent}, 0.4)`} strokeWidth="0.8" />
+        <path d="M-5 91 C67 91 136 82 215 42" stroke={`rgba(${accent}, 0.23)`} strokeWidth="0.8" />
+        <path d="M-5 98 C82 92 148 91 215 59" stroke={`rgba(${accent}, 0.15)`} strokeWidth="0.8" />
+      </svg>
+      <div className="relative z-10 flex min-w-0 items-center gap-3 xl:w-[215px] xl:shrink-0">
+        <div className="relative size-11 shrink-0 overflow-hidden rounded-full border border-white/20 bg-black/60 font-mono text-sm font-bold" aria-label={`${token.ticker} token logo`}>
+          {token.logoUrl && !logoFailed ? <img src={token.logoUrl} alt={`${token.name} logo`} loading="lazy" referrerPolicy="no-referrer" onError={() => setLogoFailed(true)} className="size-full object-cover" /> : <span className="flex size-full items-center justify-center">{token.ticker.slice(0,2)}</span>}
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate font-semibold text-white" title={token.name}>{token.name}</h3>
-          <p className="truncate text-xs text-zinc-400" title={`$${token.ticker} · ${token.launchpad} · ${formatAge(token.ageMinutes)} ago`}>
-            ${token.ticker} · {token.launchpad} · {formatAge(token.ageMinutes)} ago
-          </p>
-          {token.address && (
-            <button type="button" onClick={copyContract} title={token.address} aria-label={`Copy ${token.ticker} contract address`} className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 font-mono text-[10px] text-zinc-300 transition-colors hover:text-white">
-              <span className="truncate">{token.address.slice(0, 7)}...{token.address.slice(-5)}</span>
-              {copyStatus === 'copied' ? <Check className="size-3 shrink-0" /> : <Copy className="size-3 shrink-0" />}
-            </button>
-          )}
-          <span className="sr-only" role="status" aria-live="polite">{copyStatus === 'copied' ? 'Contract copied' : copyStatus === 'failed' ? 'Copy failed' : ''}</span>
-        </div>
-        <button type="button" disabled={!token.address} onClick={() => onToggleFavorite(token.address)} aria-label={isFavorite ? `Remove ${token.ticker} from favorites` : `Add ${token.ticker} to favorites`} aria-pressed={isFavorite} title={isFavorite ? 'Remove favorite' : 'Add to favorites'} className={cn('flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors', isFavorite ? 'border-[#ff781f]/60 bg-[#ff781f]/15 text-[#ff781f]' : 'border-white/15 bg-black/30 text-zinc-300 hover:border-[#ff781f]/60 hover:text-[#ff781f]')}>
-          <Star className={cn('size-4', isFavorite && 'fill-current')} aria-hidden="true" />
-        </button>
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <span className={cn('rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider', token.status === 'graduated' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-[#ff781f]/45 bg-[#ff781f]/10 text-[#ff9b54]')}>
-          {token.status === 'graduated' ? 'Surfaced' : token.status === 'graduating' ? 'Graduating' : 'On curve'}
-        </span>
-        <span className="font-mono text-xs text-white">{progress}%</span>
-      </div>
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-[10px] uppercase tracking-wider text-zinc-400"><span>Curve progress</span><span>{progress}%</span></div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full bg-gradient-to-r from-[#ff781f] to-[#ffab50] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
+        <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-semibold" title={token.name}>{token.name}</h3><p className="truncate text-[11px] text-zinc-400">${token.ticker} · {formatAge(token.ageMinutes)} ago</p>
+          <button type="button" onClick={copyContract} title={token.address} className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-zinc-400 hover:text-white"><span>{token.address.slice(0,6)}…{token.address.slice(-4)}</span>{copyStatus==='copied'?<Check className="size-3"/>:<Copy className="size-3"/>}</button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-3">
-        <div className="min-w-0"><p className="text-[10px] uppercase tracking-wider text-zinc-400">Market Cap</p><p className="mt-1 truncate text-lg font-bold tabular-nums text-[#ff962f]" title="Estimated USD market cap">{formatUsdMarketCap(token.mcap, ethUsd)}</p></div>
-        <div className="min-w-0"><p className="text-[10px] uppercase tracking-wider text-zinc-400">Routed Vol</p><p className="mt-1 truncate text-base font-semibold tabular-nums text-white" title="Cumulative routed volume, not 24h volume">{formatEth(token.volume)} {network.currency}</p></div>
+      <div className="relative z-10 flex flex-wrap items-center gap-x-4 gap-y-2 xl:min-w-0 xl:flex-1">
+        <div className="min-w-[96px] flex-1 xl:flex-none"><p className="text-[10px] uppercase text-zinc-500">Market cap</p><p className="mt-0.5 text-sm font-semibold tabular-nums">{formatUsdMarketCap(token.mcap, ethUsd)}</p></div>
+        <div className="min-w-[96px] flex-1 xl:flex-none"><p className="text-[10px] uppercase text-zinc-500">Routed volume</p><p className="mt-0.5 text-xs font-semibold tabular-nums">{formatEth(token.volume)} {network.currency}</p></div>
+        <div className="min-w-[125px] flex-[2] xl:flex-1"><div className="flex items-center justify-between gap-2 text-[10px]"><span className="text-zinc-400">{token.status === 'graduated' ? 'Surfaced' : token.status === 'graduating' ? 'Graduating' : 'On curve'}</span><span className="font-mono">{progress}%</span></div><div className="mt-2 h-1 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full bg-[#ff781f]" style={{width:`${progress}%`}}/></div></div>
       </div>
-      <div className="mt-auto grid grid-cols-2 gap-2">
-        <Link href={`/swap?ca=${encodeURIComponent(token.address)}`} className="inline-flex h-10 items-center justify-center rounded-full border border-[#ff781f] bg-[#ff781f] px-2 text-center text-xs font-bold text-black transition hover:brightness-110 sm:text-sm">Swap on SpyHooks</Link>
-        <a href={`https://robinhoodchain.blockscout.com/token/${token.address}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center justify-center gap-1 rounded-full border border-[#ff781f]/50 bg-[#ff781f]/10 px-2 text-center text-xs font-semibold text-[#ff9b54] transition hover:bg-[#ff781f]/20 sm:text-sm">View contract <ArrowUpRight className="size-3.5 shrink-0" /></a>
+      <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-2 xl:justify-end">
+        <Link href={`/compare?add=${encodeURIComponent(token.address)}`} title="Add to comparison" aria-label={`Compare ${token.ticker}`} className="inline-flex size-9 items-center justify-center rounded-full border border-white/20 text-zinc-300 hover:border-[#ff781f]/60 hover:text-[#ff781f]"><GitCompareArrows className="size-4"/></Link>
+        <button type="button" onClick={()=>onToggleFavorite(token.address)} aria-label={isFavorite?'Remove favorite':'Add favorite'} aria-pressed={isFavorite} className={cn('inline-flex size-9 items-center justify-center rounded-full border',isFavorite?'border-[#ff781f]/60 text-[#ff781f]':'border-white/20 text-zinc-300')}><Star className={cn('size-4',isFavorite&&'fill-current')}/></button>
+        <Link href={`/swap?ca=${encodeURIComponent(token.address)}`} className="inline-flex h-9 items-center justify-center rounded-full bg-[#ff781f] px-4 text-xs font-bold text-black hover:brightness-110">Swap</Link>
+        <a href={`https://robinhoodchain.blockscout.com/token/${token.address}`} target="_blank" rel="noopener noreferrer" aria-label={`View ${token.ticker} contract`} className="inline-flex h-9 items-center gap-1 rounded-full border border-white/20 px-3 text-xs text-zinc-300 hover:border-white/40">Explorer <ArrowUpRight className="size-3"/></a>
       </div>
+      <span className="sr-only" role="status" aria-live="polite">{copyStatus==='copied'?'Contract copied':copyStatus==='failed'?'Copy failed':''}</span>
     </li>
   )
 }
@@ -127,7 +125,7 @@ function TokenCardSkeleton() {
 }
 
 export function TokenBoard() {
-  const { tokens, isLoading, error } = useTokens()
+  const { tokens, isLoading, error, refreshTokens } = useTokens()
   const { ethUsd } = useEthUsd()
   const [filter, setFilter] = useState<Filter>('all')
   const [query, setQuery] = useState('')
@@ -249,13 +247,18 @@ export function TokenBoard() {
         </div>
       </div>
 
+      {error && tokens.length > 0 && (
+        <p role="status" className="mb-4 rounded-2xl border border-[#ff781f]/35 bg-[#ff781f]/10 px-4 py-3 text-sm text-[#ffb27b]">
+          Live token refresh failed. Showing the previous snapshot; retrying automatically.
+        </p>
+      )}
       {isLoading ? (
         <div aria-label="Loading live tokens" aria-busy="true">
           <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
             <span className="size-2 animate-pulse rounded-full bg-primary" />
             Syncing live tokens...
           </p>
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-1 gap-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <TokenCardSkeleton key={i} />
             ))}
@@ -265,13 +268,23 @@ export function TokenBoard() {
         <div className="glass rounded-3xl p-10 text-center">
           <p className="font-medium">Unable to load live tokens</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Check your connection. We will retry automatically.
+            The live Pons feed is temporarily unavailable. Check your RPC connection and retry.
           </p>
+          <button type="button" onClick={() => void refreshTokens()} className="mt-4 rounded-full border border-[#ff781f]/60 px-4 py-2 text-sm text-[#ff9b54] hover:bg-[#ff781f]/10">
+            Retry live scan
+          </button>
         </div>
       ) : visible.length === 0 ? (
-        <p className="glass rounded-3xl p-10 text-center text-muted-foreground">No tokens match your filter.</p>
+        <div className="glass rounded-3xl p-10 text-center text-muted-foreground">
+          <p>{tokens.length === 0 ? 'No live tokens returned by the Pons scanner yet.' : 'No tokens match your filter.'}</p>
+          {tokens.length === 0 && (
+            <button type="button" onClick={() => void refreshTokens()} className="mt-4 rounded-full border border-[#ff781f]/60 px-4 py-2 text-sm text-[#ff9b54] hover:bg-[#ff781f]/10">
+              Refresh live tokens
+            </button>
+          )}
+        </div>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-3">
           {visible.map((token) => (
             <TokenCard
               key={`${token.ticker}-${token.address}`}
